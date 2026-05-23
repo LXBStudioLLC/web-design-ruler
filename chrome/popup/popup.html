@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=350">
+  <title>Web Design Ruler</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <div class="logo-container">
+      <span class="logo-icon">&#x1F4CF;</span>
+      <h1>Web Design Ruler</h1>
+    </div>
+    <span class="version">v2.0</span>
+  </header>
+
+  <main>
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="color" role="tab" aria-selected="true">
+        <span class="tab-icon">&#x1F3A8;</span>
+        <span>Color</span>
+      </button>
+      <button class="tab-btn" data-tab="font" role="tab" aria-selected="false">
+        <span class="tab-icon">Aa</span>
+        <span>Font</span>
+      </button>
+      <button class="tab-btn" data-tab="measure" role="tab" aria-selected="false">
+        <span class="tab-icon">&#x1F4D0;</span>
+        <span>Measure</span>
+      </button>
+      <button class="tab-btn" data-tab="palettes" role="tab" aria-selected="false">
+        <span class="tab-icon">&#x1F3AD;</span>
+        <span>Palettes</span>
+      </button>
+    </nav>
+
+    <!-- Color Tab -->
+    <section class="tab-pane active" id="color-tab" role="tabpanel">
+      <button class="primary-btn" id="color-picker-btn">
+        <span class="btn-icon">&#x1F3A8;</span>
+        Activate Color Picker
+      </button>
+
+      <div class="color-result hidden" id="color-result">
+        <div class="color-swatch" id="color-swatch"></div>
+        <div class="color-values">
+          <div class="color-value">
+            <label>HEX</label>
+            <input type="text" id="color-hex" readonly>
+            <button class="copy-btn" data-value="hex" title="Copy HEX">Copy</button>
+          </div>
+          <div class="color-value">
+            <label>RGB</label>
+            <input type="text" id="color-rgb" readonly>
+            <button class="copy-btn" data-value="rgb" title="Copy RGB">Copy</button>
+          </div>
+          <div class="color-value">
+            <label>HSL</label>
+            <input type="text" id="color-hsl" readonly>
+            <button class="copy-btn" data-value="hsl" title="Copy HSL">Copy</button>
+          </div>
+        </div>
+        <button class="secondary-btn full-width" id="save-to-palette">Save to Palette</button>
+      </div>
+
+      <div class="recent-colors hidden" id="recent-colors">
+        <h3>Recent Colors</h3>
+        <div class="color-grid" id="recent-colors-grid"></div>
+      </div>
+    </section>
+
+    <!-- Font Tab -->
+    <section class="tab-pane" id="font-tab" role="tabpanel">
+      <button class="primary-btn" id="font-detector-btn">
+        <span class="btn-icon">Aa</span>
+        Activate Font Detector
+      </button>
+
+      <div class="font-result hidden" id="font-result">
+        <div class="font-preview" id="font-preview"></div>
+        <ul class="font-properties" id="font-properties"></ul>
+        <div class="font-actions">
+          <button class="secondary-btn" id="copy-font-css">Copy CSS</button>
+          <button class="secondary-btn" id="save-font">Save Font</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Measure Tab -->
+    <section class="tab-pane" id="measure-tab" role="tabpanel">
+      <button class="primary-btn" id="measure-tool-btn">
+        <span class="btn-icon">&#x1F4D0;</span>
+        Activate Measurement Tool
+      </button>
+
+      <div class="measure-result hidden" id="measure-result">
+        <div class="measurement-visual" id="measurement-visual"></div>
+        <div class="measurements">
+          <div class="measurement">
+            <label>Width:</label>
+            <input type="text" id="measure-width" readonly>
+            <span>px</span>
+          </div>
+          <div class="measurement">
+            <label>Height:</label>
+            <input type="text" id="measure-height" readonly>
+            <span>px</span>
+          </div>
+          <div class="measurement">
+            <label>Diagonal:</label>
+            <input type="text" id="measure-diagonal" readonly>
+            <span>px</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Palettes Tab -->
+    <section class="tab-pane" id="palettes-tab" role="tabpanel">
+      <div class="palette-tools">
+        <button class="primary-btn" id="create-palette">+ New Palette</button>
+        <select id="palette-selector" aria-label="Select palette">
+          <option value="">Select a palette...</option>
+        </select>
+      </div>
+
+      <div class="current-palette hidden" id="current-palette">
+        <div class="palette-header">
+          <h3 id="palette-name"></h3>
+          <button class="icon-btn" id="edit-palette-name" title="Rename palette">&#x270F;</button>
+        </div>
+        <div class="color-grid" id="palette-colors"></div>
+        <div class="palette-actions">
+          <button class="secondary-btn" id="export-palette">Export</button>
+          <button class="danger-btn" id="delete-palette">Delete</button>
+        </div>
+      </div>
+
+      <div class="import-section">
+        <input type="file" id="import-palette" accept=".json" hidden>
+        <button class="secondary-btn full-width" id="import-btn">Import Palette</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-brand">
+      <a href="https://webdesignruler.com" target="_blank">WebDesignRuler.com</a>
+      <span class="footer-divider">|</span>
+      <span>by <a href="https://lxb-studio.com" target="_blank">LXB Studio</a></span>
+    </div>
+    <a href="https://lxb-studio.com/contact/" target="_blank" class="support-link">Support</a>
+  </footer>
+
+  <script src="palette.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
