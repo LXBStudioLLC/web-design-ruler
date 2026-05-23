@@ -9,11 +9,11 @@ ranked against each other.
 
 ---
 
-## Shipped — v2.0.0 (this repo)
+## Shipped — v2.0.0 (2026-01)
 
 A multi-browser rebuild: three purpose-built manifests + background scripts
 (chrome / edge / firefox). See [CHANGELOG](./CHANGELOG.md) for the full list.
-Headline fixes vs the previously published v1.1 / v1.1.1:
+Headline fixes vs v1.1 / v1.1.1:
 
 - Edge service-worker no longer dies after ~30 s of inactivity.
 - Every async API call now checks `chrome.runtime.lastError` instead of
@@ -26,9 +26,8 @@ Headline fixes vs the previously published v1.1 / v1.1.1:
 - Firefox uses native `browser.*` Promises throughout the background and
   content script.
 
-v2.0.0 has **not yet been uploaded** to the Chrome Web Store / Firefox
-Add-ons stores. Users with the extension installed still have v1.1 / v1.1.1.
-The first store upload will likely be v2.0.1 (see Next).
+**Store dates:** Firefox AMO 2026-01-13, Chrome Web Store 2026-01-19, Edge
+Add-ons concurrent. v2.0.0 was the first appearance of WDR on Edge.
 
 ---
 
@@ -65,7 +64,28 @@ the implementation cost is bounded.
 
 ---
 
-## Later — v2.2+ candidate features
+## After 2.1 — v2.2 (Firefox feature parity restoration)
+
+Firefox v1.1.1 shipped with several Firefox-exclusive features that were
+removed in the v2.0.0 cross-browser rebuild to achieve parity. Restore the
+ones that don't compromise privacy or cost new permissions. The deep
+[CHANGELOG](./CHANGELOG.md) documents what existed; this is the plan to
+bring it back.
+
+| Item | What it was in 1.1.1 | Complexity | New permissions | Privacy impact |
+|---|---|---|---|---|
+| **First-run welcome page** | `welcome/welcome.html` opened on `runtime.onInstalled` with hero badge, feature grid, shortcut cheat-sheet. A real onboarding moment that the current install flow lacks. | S | None | None |
+| **Toolbar badge state animation** | Green `●` while a tool is active, `✓` after a successful pick/detect/measure, cleared after 2 s. Visual confirmation without opening the popup. | S | None | None |
+| **Nested "Web Design Ruler" right-click submenu** | Parent menu with emoji-prefixed children (`🎨 Pick Color`, `🔤 Identify Font`, `📐 Measure Element`) and a separator. v2.0.0 flattened these into three siblings. | XS | None | None |
+| **"Copy All Colors on Page" context-menu action** | Walks the DOM, dedupes computed colors, builds an auto-named palette, copies as CSS custom properties to the clipboard. A workflow win that designers reach for often. | M | None | None |
+| **Restore extra keyboard shortcuts** | v1.1.1 had Ctrl+Shift+F for Font Detector and Ctrl+Shift+M for Measurement Tool. v2.0.0 dropped both — only the popup-open (Ctrl+Shift+R) and color-picker (Ctrl+Shift+P) shortcuts remain. | XS | None | None |
+| **Theme awareness** | `browser.theme.onUpdated` listener + `getThemeColors` message handler — designed to drive theme-aware palette suggestions on Firefox. Currently registered nowhere in 2.0.x. | S | None (Firefox only API) | None |
+| **Firefox-themed default palette** | v1.1.1 seeded a "Firefox Theme" palette (`#FF9500`, `#002147`, `#00FEFF`, `#B1B1B3`, `#FFFFFF`) alongside LXB Studio / Material Design / Neutrals. v2.0.0 reduced defaults to two generic palettes. Worth restoring as a per-build seed. | XS | None | None |
+| **Resurrect the sidebar UI** | An unreleased `sidebar/panel.html` exists in the pre-1.1.1 Firefox dev build (cut before AMO submission). Firefox supports `sidebar_action` natively; could be a docked panel for picked colors + recent measurements. | L | `sidebar_action` (Firefox-only manifest key) | None |
+
+---
+
+## Later — v2.3+ candidate features
 
 These are user-requested or designer-workflow features. Each one would land in
 its own release. Listed without strict priority — pick whichever solves your
