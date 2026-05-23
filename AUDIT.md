@@ -1,6 +1,16 @@
 ## Overview
 
-The canonical Web Design Ruler source as of this audit is `builds/` v2.0.0 — three per-browser unpacked extensions (`builds/chrome`, `builds/edge`, `builds/firefox`) plus pre-zipped artifacts (`builds/chrome.zip`, `builds/edge.zip`, `builds/firefox.zip`). All three manifests report `"version": "2.0.0"`. The currently published store versions are older: Chrome Web Store listing `cdheenjplgjmjfabnejeimmgdkajhadi` is v1.1 and the Firefox Add-ons listing (`web-design-ruler`) is v1.1.1. v2.0.0 has not yet been published; it is a complete rebuild that introduces Edge support, three per-browser builds, MV3 + `clipboardWrite` + `alarms` permissions (Edge only), explicit `host_permissions`, a duplicate-injection guard, modern `navigator.clipboard` with `execCommand` fallback, and a Firefox build that swaps `chrome.*` callbacks for `browser.*` Promises. The legacy single-bundle source still present in the parent directory (`WebDesignRuler/` and `lxb-design-assistant/`) is pre-v2 and should be considered superseded by `builds/`.
+The canonical Web Design Ruler source is the multi-browser v2.x tree in this repo — three per-browser unpacked extensions (`chrome/`, `edge/`, `firefox/`). All three manifests are currently at `2.0.1` (Firefox popup callback fix on top of the 2.0.0 rebuild).
+
+**Store status as of this audit:**
+
+- **Firefox AMO** (`web-design-ruler`) — v2.0.1, published 2026-05-23.
+- **Chrome Web Store** (`cdheenjplgjmjfabnejeimmgdkajhadi`) — v2.0.0, last updated 2026-01-19. Chrome upload of 2.0.1 still pending.
+- **Edge Add-ons** (`nfgkdmbklfallhofeblhfkibdcobocjl`) — v2.0.0 per the Edge `getproductdetailsbycrxid` JSON API. Edge upload of 2.0.1 still pending.
+
+v2.0.0 was a complete multi-browser rebuild — introduced Edge support, three per-browser builds, explicit `host_permissions`, a duplicate-injection guard, modern `navigator.clipboard` with `execCommand` fallback, and a Firefox build that swaps `chrome.*` callbacks for `browser.*` Promises. v2.0.0 shipped to all three stores in January 2026. v2.0.1 followed on 2026-05-23 with the Firefox popup-handler fix described under Top-3 findings below.
+
+The legacy single-bundle source still present in the parent directory (`WebDesignRuler/` and `lxb-design-assistant/`) is pre-v2 and superseded.
 
 ## Architecture
 
@@ -88,7 +98,7 @@ None of the three `mousemove` handlers is wrapped in `requestAnimationFrame`, th
 
 ## Top-3 findings
 
-1. **Firefox popup tool-activation handler is broken.** `builds/firefox/popup/popup.js:111` passes a callback to `browser.runtime.sendMessage`, which Firefox's WebExtensions Promise-based API does not support. The response handler will never execute on Firefox. Symptom: clicking `Activate Color Picker` (or Font / Measure) in the Firefox popup will close the popup only if the synchronous code path happens to receive `undefined` and fall through; otherwise it shows no notification and the user gets no feedback. This is the single highest-impact issue in the audit because it directly contradicts a documented store-listing feature on Firefox.
+1. **Firefox popup tool-activation handler was broken in 2.0.0.** `firefox/popup/popup.js:111` passed a callback to `browser.runtime.sendMessage`, which Firefox's WebExtensions Promise-based API does not support. The response handler never executed on Firefox. Symptom: clicking `Activate Color Picker` (or Font / Measure) in the Firefox popup would close the popup only if the synchronous code path happened to receive `undefined` and fall through; otherwise it showed no notification and the user got no feedback. v2.0.0 shipped to AMO on 2026-01-13 with this bug intact and active in production for ~4 months. **Fixed in v2.0.1** (2026-05-23) by converting `activateTool` to `async` and awaiting the Promise with try/catch.
 
 2. **Marketing copy contradicts host_permissions.** The store description states "only accesses active tab when tools explicitly activated", but the manifests declare `host_permissions: ["http://*/*","https://*/*"]` plus a `content_scripts` block that statically loads `content-script.js` into every HTTP(S) page at `document_end`. The script is benign (only registers a message listener until activated) but it does load universally. Either the manifest needs to be narrowed to `activeTab`-only with dynamic injection, or the marketing copy needs to be reworded.
 
