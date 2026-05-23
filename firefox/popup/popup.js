@@ -105,17 +105,12 @@ function initializeToolButtons() {
   }
 }
 
-function activateTool(action, toolName) {
+async function activateTool(action, toolName) {
   console.log('[WDR-Firefox] Activating tool:', action);
 
-  browserAPI.runtime.sendMessage({ action }, (response) => {
+  try {
+    const response = await browserAPI.runtime.sendMessage({ action });
     console.log('[WDR-Firefox] Tool activation response:', response);
-
-    if (browserAPI.runtime.lastError) {
-      console.error('[WDR-Firefox] Runtime error:', browserAPI.runtime.lastError);
-      showNotification(`Cannot activate ${toolName}: ${browserAPI.runtime.lastError.message}`, 'error');
-      return;
-    }
 
     if (response && response.success) {
       window.close();
@@ -124,7 +119,10 @@ function activateTool(action, toolName) {
     } else {
       showNotification(`Cannot activate ${toolName}. Try refreshing the page.`, 'error');
     }
-  });
+  } catch (error) {
+    console.error('[WDR-Firefox] Runtime error:', error);
+    showNotification(`Cannot activate ${toolName}: ${error.message}`, 'error');
+  }
 }
 
 // ============================================================================
