@@ -8,7 +8,7 @@ Read it here: <https://www.contributor-covenant.org/version/2/1/code_of_conduct/
 ## Reporting
 
 If you experience or witness behavior that violates the Covenant, please
-contact **LXB Studio LLC** at <LXBStudio@gmail.com>. Reports will be reviewed
+contact **LXB Studio LLC** at <LXBStudioLLC@gmail.com>. Reports will be reviewed
 and responded to within 7 days, and treated as confidential.
 
 ## Enforcement
