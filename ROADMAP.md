@@ -32,15 +32,18 @@ The first store upload will likely be v2.0.1 (see Next).
 
 ---
 
-## Next — v2.0.1 (audit cleanup, before next store upload)
+## Shipped — v2.0.1 (2026-05-23)
 
-Pre-release polish based on the v2.0.0 audit. None of these are user-facing
-new features — they're correctness and honesty fixes that should land before
-v2.0.0 actually ships to users.
+The highest-impact audit finding shipped as a point release:
 
-| Item | Why it ships in 2.0.1 | Complexity | New permissions | Privacy impact |
+- **Firefox popup tool-activation handler** — converted to async/await on
+  `browser.runtime.sendMessage`. Tool buttons in the Firefox popup actually
+  do something now. See [CHANGELOG](./CHANGELOG.md#201--2026-05-23).
+
+## Next — v2.0.2 (remaining audit cleanup, before store upload)
+
+| Item | Why it ships in 2.0.2 | Complexity | New permissions | Privacy impact |
 |---|---|---|---|---|
-| **Fix Firefox popup tool-activation handler** | `firefox/popup/popup.js:111` passes a callback to a Promise-based `browser.runtime.sendMessage`. Response handler never fires on Firefox. Highest-impact audit finding. | S | None | None |
 | **Reconcile permissions with marketing copy** | Store listing says "only accesses active tab when tools explicitly activated", but `host_permissions: ["http://*/*","https://*/*"]` + static `content_scripts` means the script loads on every page. Two paths: (a) drop `host_permissions` + static `content_scripts`, rely on dynamic `scripting.executeScript`; (b) reword the marketing copy. Decision pending. | S (rewording) or M (manifest tightening + re-test) | Removes a permission if path (a) | Positive either way |
 | **Replace fixed-interval Edge retries with real exponential backoff** | README claims exponential backoff; `edge/background.js:264-282` uses fixed 200 ms. Either rename to "fixed interval" or actually backoff (200, 400, 800 ms). | XS | None | None |
 | **Remove dead code: `selectedColorType`, `hasEyeDropperAPI`** | `chrome/scripts/content-script.js:346` and `:142-144` are unreachable in shipped code. Already removed from Firefox build. | XS | None | None |
