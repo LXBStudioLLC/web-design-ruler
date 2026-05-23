@@ -10,6 +10,7 @@
 Free. Offline. Open source.
 
 [![Install on Chrome](https://img.shields.io/badge/Install%20on-Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chrome.google.com/webstore/detail/cdheenjplgjmjfabnejeimmgdkajhadi)
+[![Install on Edge](https://img.shields.io/badge/Install%20on-Edge-0078D7?style=for-the-badge&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/nfgkdmbklfallhofeblhfkibdcobocjl)
 [![Install on Firefox](https://img.shields.io/badge/Install%20on-Firefox-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/firefox/addon/web-design-ruler/)
 [![Download ZIP](https://img.shields.io/badge/Download-ZIP-00E5FF?style=for-the-badge&logo=download&logoColor=white)](https://github.com/LXBStudioLLC/web-design-ruler/releases/latest)
 
@@ -17,7 +18,8 @@ Free. Offline. Open source.
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cdheenjplgjmjfabnejeimmgdkajhadi?style=for-the-badge&label=Chrome%20Web%20Store&color=4285F4)](https://chrome.google.com/webstore/detail/cdheenjplgjmjfabnejeimmgdkajhadi)
 [![Chrome users](https://img.shields.io/chrome-web-store/users/cdheenjplgjmjfabnejeimmgdkajhadi?style=for-the-badge&label=users&color=4285F4)](https://chrome.google.com/webstore/detail/cdheenjplgjmjfabnejeimmgdkajhadi)
-[![Chrome rating](https://img.shields.io/chrome-web-store/rating/cdheenjplgjmjfabnejeimmgdkajhadi?style=for-the-badge&label=rating&color=4285F4)](https://chrome.google.com/webstore/detail/cdheenjplgjmjfabnejeimmgdkajhadi)
+[![Edge Add-ons](https://img.shields.io/badge/dynamic/json?label=Edge%20Add-ons&prefix=v&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fnfgkdmbklfallhofeblhfkibdcobocjl&style=for-the-badge&color=0078D7&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/nfgkdmbklfallhofeblhfkibdcobocjl)
+[![Edge users](https://img.shields.io/badge/dynamic/json?label=users&query=%24.activeInstallCount&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fnfgkdmbklfallhofeblhfkibdcobocjl&style=for-the-badge&color=0078D7)](https://microsoftedge.microsoft.com/addons/detail/nfgkdmbklfallhofeblhfkibdcobocjl)
 [![Firefox version](https://img.shields.io/amo/v/web-design-ruler?style=for-the-badge&label=Firefox%20Add-ons&color=FF7139)](https://addons.mozilla.org/firefox/addon/web-design-ruler/)
 [![Firefox users](https://img.shields.io/amo/users/web-design-ruler?style=for-the-badge&label=users&color=FF7139)](https://addons.mozilla.org/firefox/addon/web-design-ruler/)
 [![License: MIT](https://img.shields.io/github/license/LXBStudioLLC/web-design-ruler?style=for-the-badge&color=00E5FF)](./LICENSE)
@@ -77,7 +79,7 @@ Eyedropper-style color picker with HEX/RGB/HSL output, recent colors history, an
 
 ### Microsoft Edge
 
-The Chrome Web Store version works in Edge. Visit the link above in Edge and choose *Allow extensions from other stores*, then *Add to Chrome*. A native Edge listing is coming.
+[**Web Design Ruler on Edge Add-ons**](https://microsoftedge.microsoft.com/addons/detail/nfgkdmbklfallhofeblhfkibdcobocjl) → click *Get*.
 
 ### Firefox
 
