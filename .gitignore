@@ -1,0 +1,25 @@
+# Build artifacts
+dist/
+build/
+*.zip
+*.xpi
+*.crx
+
+# Dependencies
+node_modules/
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env
+.env
+.env.local
