@@ -51,23 +51,17 @@ Three precision tools, available from one toolbar button or the right-click menu
 ### 📏 Measure
 Pixel-perfect ruler that snaps to elements. Get width, height, padding, margin, and border in one drag. No more squinting at DevTools' computed panel.
 
-<img src="docs/assets/install-step-3.jpg" alt="Measurement tool overlaid on a webpage" width="240">
-
 </td>
 <td align="center" width="33%">
 
 ### 🔠 Identify Font
 Hover any text on any site. See font family, weight, size, line-height, letter-spacing, and color — instantly. Click to lock the panel for copy-paste.
 
-<img src="docs/assets/install-step-2.jpg" alt="Font detector showing font details on hover" width="240">
-
 </td>
 <td align="center" width="33%">
 
 ### 🎨 Pick Color
 Eyedropper-style color picker with HEX/RGB/HSL output, recent colors history, and saved palettes. Native EyeDropper API where supported, visual fallback elsewhere.
-
-<img src="docs/assets/install-step-1.jpg" alt="Color picker showing palette options" width="240">
 
 </td>
 </tr>
@@ -181,7 +175,7 @@ whatever. The license is permissive.
 ### Built by LXB Studio LLC
 
 [![Website](https://img.shields.io/badge/lxb--studio.com-0a0a0a?style=for-the-badge&logo=googlechrome&logoColor=00E5FF)](https://lxb-studio.com)
-[![Email](https://img.shields.io/badge/email-LXBStudio@gmail.com-EC4899?style=for-the-badge&logo=gmail&logoColor=white)](mailto:LXBStudio@gmail.com)
+[![Email](https://img.shields.io/badge/email-LXBStudioLLC@gmail.com-EC4899?style=for-the-badge&logo=gmail&logoColor=white)](mailto:LXBStudioLLC@gmail.com)
 [![GitHub](https://img.shields.io/badge/GitHub-LXBStudioLLC-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/LXBStudioLLC)
 
 *Other LXB Studio extensions and apps: [github.com/LXBStudioLLC](https://github.com/LXBStudioLLC)*
