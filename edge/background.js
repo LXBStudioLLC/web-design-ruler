@@ -18,7 +18,7 @@ const PING_TIMEOUT_MS = 1500;  // Longer timeout for Edge
 const INJECTION_RETRY_DELAY_MS = 200;  // Longer delay for Edge
 const MAX_INJECTION_RETRIES = 4;  // More retries for Edge
 const KEEP_ALIVE_ALARM_NAME = 'wdr-keep-alive';
-const KEEP_ALIVE_INTERVAL_MINUTES = 0.4;  // ~24 seconds to stay under 30s limit
+const WAKE_UP_INTERVAL_MINUTES = 0.5;
 
 const RESTRICTED_URL_PATTERNS = [
   /^chrome:\/\//,
@@ -39,27 +39,21 @@ const MENU_ITEMS = [
 let menusCreated = false;
 
 // ============================================================================
-// EDGE-SPECIFIC: KEEP-ALIVE MECHANISM
+// EDGE-SPECIFIC: WAKE-UP MECHANISM
 // ============================================================================
 
-/**
- * Set up keep-alive alarm to prevent service worker termination
- * Edge terminates service workers more aggressively than Chrome
- */
 function setupKeepAlive() {
-  // Create an alarm that fires periodically
   chrome.alarms.create(KEEP_ALIVE_ALARM_NAME, {
-    periodInMinutes: KEEP_ALIVE_INTERVAL_MINUTES
+    periodInMinutes: WAKE_UP_INTERVAL_MINUTES
   });
-  console.log('[WDR-Edge] Keep-alive alarm set');
+  console.log('[WDR-Edge] Wake-up alarm set');
 }
 
 // Handle alarm
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === KEEP_ALIVE_ALARM_NAME) {
-    // Just accessing storage is enough to keep the service worker alive
     chrome.storage.local.get('_keepAlive', () => {
-      console.log('[WDR-Edge] Keep-alive ping');
+      console.log('[WDR-Edge] Wake-up ping');
     });
   }
 });
