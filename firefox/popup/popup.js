@@ -38,6 +38,52 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.textContent = list.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
     });
 
+    document.getElementById('copy-css-export').addEventListener('click', () => {
+      browserAPI.storage.local.get(['lastPickedColor', 'lastDetectedFont', 'lastMeasurement']).then((data) => {
+        let snippet = '/* Web Design Ruler export */\n';
+        let hasData = false;
+        if (data.lastPickedColor) {
+          snippet += `color: ${data.lastPickedColor};\n`;
+          hasData = true;
+        }
+        if (data.lastDetectedFont) {
+          const fw = String(data.lastDetectedFont.fontWeight).split(' ')[0];
+          snippet += `font-family: ${data.lastDetectedFont.fontFamilyStack};\n`;
+          snippet += `font-size: ${data.lastDetectedFont.fontSize};  font-weight: ${fw};  line-height: ${data.lastDetectedFont.lineHeight};\n`;
+          hasData = true;
+        }
+        if (data.lastMeasurement) {
+          snippet += `width: ${data.lastMeasurement.width}px;  height: ${data.lastMeasurement.height}px;\n`;
+          hasData = true;
+        }
+        if (hasData) {
+          copyToClipboard(snippet);
+          showNotification('CSS snippet copied!', 'success');
+        }
+      });
+    });
+
+    const clearRecentBtn = document.getElementById('clear-recent-colors');
+    let clearRecentTimer = null;
+    clearRecentBtn.addEventListener('click', () => {
+      if (clearRecentBtn.classList.contains('confirming')) {
+        clearTimeout(clearRecentTimer);
+        clearRecentBtn.classList.remove('confirming');
+        clearRecentBtn.textContent = 'Clear';
+        browserAPI.storage.local.set({ recentColors: [] }).then(() => {
+          document.getElementById('recent-colors').classList.add('hidden');
+          showNotification('Recent colors cleared', 'success');
+        });
+      } else {
+        clearRecentBtn.classList.add('confirming');
+        clearRecentBtn.textContent = 'Confirm?';
+        clearRecentTimer = setTimeout(() => {
+          clearRecentBtn.classList.remove('confirming');
+          clearRecentBtn.textContent = 'Clear';
+        }, 3000);
+      }
+    });
+
     console.log('[WDR-Firefox] Loading stored data...');
     loadStoredData();
 
@@ -156,6 +202,8 @@ async function loadStoredData() {
     if (data.lastMeasurement) {
       displayMeasurement(data.lastMeasurement);
     }
+    const hasExportData = !!(data.lastPickedColor || data.lastDetectedFont || data.lastMeasurement);
+    document.getElementById('copy-css-export').disabled = !hasExportData;
   } catch (error) {
     console.error('[WDR-Firefox] loadStoredData error:', error);
   }
@@ -207,6 +255,11 @@ function displayRecentColors(colors) {
   colors.forEach(color => {
     const swatch = createColorSwatch(color);
     swatch.addEventListener('click', () => displayPickedColor(color));
+    swatch.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      copyToClipboard(color);
+      showNotification(color + ' copied', 'success');
+    });
     grid.appendChild(swatch);
   });
 }
@@ -628,6 +681,15 @@ function initializeCopyButtons() {
           break;
         case 'hsl':
           value = document.getElementById('color-hsl').value;
+          break;
+        case 'width':
+          value = document.getElementById('measure-width').value + 'px';
+          break;
+        case 'height':
+          value = document.getElementById('measure-height').value + 'px';
+          break;
+        case 'diagonal':
+          value = document.getElementById('measure-diagonal').value + 'px';
           break;
       }
 

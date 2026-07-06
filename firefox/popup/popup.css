@@ -275,6 +275,36 @@ main {
   margin-bottom: 10px;
 }
 
+.recent-colors-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.recent-colors-header h3 {
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.text-btn:hover {
+  color: var(--danger);
+}
+
+.text-btn.confirming {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .color-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);

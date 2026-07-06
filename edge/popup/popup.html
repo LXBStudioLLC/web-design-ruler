@@ -65,9 +65,14 @@
       </div>
 
       <div class="recent-colors hidden" id="recent-colors">
-        <h3>Recent Colors</h3>
+        <div class="recent-colors-header">
+          <h3>Recent Colors</h3>
+          <button class="text-btn" id="clear-recent-colors">Clear</button>
+        </div>
         <div class="color-grid" id="recent-colors-grid"></div>
       </div>
+
+      <button class="secondary-btn full-width" id="copy-css-export" disabled>Copy as CSS</button>
     </section>
 
     <!-- Font Tab -->
@@ -109,16 +114,19 @@
             <label>Width:</label>
             <input type="text" id="measure-width" readonly>
             <span>px</span>
+            <button class="copy-btn" data-value="width" title="Copy width">Copy</button>
           </div>
           <div class="measurement">
             <label>Height:</label>
             <input type="text" id="measure-height" readonly>
             <span>px</span>
+            <button class="copy-btn" data-value="height" title="Copy height">Copy</button>
           </div>
           <div class="measurement">
             <label>Diagonal:</label>
             <input type="text" id="measure-diagonal" readonly>
             <span>px</span>
+            <button class="copy-btn" data-value="diagonal" title="Copy diagonal">Copy</button>
           </div>
         </div>
       </div>
