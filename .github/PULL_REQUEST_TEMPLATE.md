@@ -11,7 +11,7 @@
 ## How to test
 
 <!-- Concrete steps a reviewer can run. "Load chrome/ unpacked, visit example.com,
-     press Ctrl+Shift+P, hover an image, observe..." -->
+     press Alt+Shift+P, hover an image, observe..." -->
 
 ## Checklist
 

@@ -28,8 +28,8 @@ storage, no innerHTML, all three builds). No new permissions.
   to a 10 px grid. Panel shows area (`A: {w×h} px²`, formatted `12.4k`
   above 9999). Popup displays area. Stored in measurement object.
 - **Full font history** (Feature 3.3). Per-item live preview in detected
-  font, Web Font badge via `document.fonts.check()`, copy-CSS per item,
-  cap 50 with show-all expansion.
+  font, Web Font badge detected against the inspected page's FontFaceSet
+  at detection time, copy-CSS per item, cap 50 with show-all expansion.
 - **Right-click picks text color** (Feature 3.4). While eyedropping,
   `contextmenu` selects the text color instead of background. Panel
   hint mentions it.
@@ -42,6 +42,29 @@ storage, no innerHTML, all three builds). No new permissions.
 
 ### Changed
 - All three manifests bumped `2.1.0` → `2.2.0`.
+
+### Fixed (deep-check follow-up, 2026-07-06)
+- **Edge: all tool activation was broken.** `activateTool` in the Edge
+  background lost its `tab` parameter during the Phase 1 refactor, so
+  every popup button, keyboard shortcut, and context-menu item failed
+  with `tab is not defined`. Restored the parameter.
+- Picker's media canvas cache is keyed by element identity (plus backing
+  dimensions/source), fixing wrong pixel colors when hovering two
+  same-size images; animated `<canvas>` elements are redrawn per sample.
+- Web-font detection runs in the content script against the page's
+  FontFaceSet instead of the popup's (which was meaningless there).
+- Esc-cancelling a tool now clears the toolbar `●` badge via a
+  `toolCancelled` message; activating a tool cancels a pending `✓`-clear
+  timer so the badge isn't wiped 2 s later.
+- Copy All Colors scans body descendants only, skips non-rendered and
+  script/style nodes, and raises the element budget 500 → 5000.
+- Result broadcasts to the popup fire only after storage writes
+  complete, and the popup ignores the direct content-script copy —
+  fixes a stale `recentColors` re-read race.
+- Palette import input resets after reading, so re-importing the same
+  file works.
+- Removed dead `getColorFromImage/Canvas/Video` helpers left behind by
+  the cached-sampler rewrite.
 
 ## [2.1.0] — 2026-07-06
 

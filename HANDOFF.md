@@ -240,3 +240,59 @@ Replace any mention of keyboard shortcuts with:
 | `feat/v2.2-parity` | `feat/v2.1` (4ef358f) | `55bd8f1` | 2.2.0 |
 
 All branches pushed to `origin`. No tags created. No merges to `main`.
+
+---
+
+# Deep-Check Addendum (2026-07-06)
+
+Independent adversarial verification of everything above: line-by-line
+review of the chrome build, byte-level parity diffs, re-run sanity greps,
+zip↔tree re-proof, plus three parallel verification passes (Firefox
+parity, Edge + docs + packaging, promo source).
+
+## Verdict summary
+
+- **Confirmed working as claimed:** branch/commit structure, all Phase 1
+  fixes 1.1–1.11 (except regressions below), Phase 2 features 2.1–2.8,
+  Phase 3 features 3.1–3.6 (except regressions below), promo fixes 12/12
+  (fresh stills + MP4 re-rendered), manifests (4 Alt+Shift commands,
+  permissions unchanged), popup.html/css byte-identical across builds,
+  no dialogs / no network / no old shortcuts anywhere.
+
+## Regressions found and fixed (commits `8d0cec0`, `457a482`)
+
+1. **CRITICAL — Edge tool activation completely broken.**
+   `edge/background.js` `activateTool` was missing the `tab` parameter its
+   body dereferenced (`tab is not defined` on every popup button, keyboard
+   shortcut, and context-menu item). Introduced in Phase 1; survived all
+   three phases. Fixed in `8d0cec0`.
+2. Picker media canvas cache keyed by tag+size, not element identity —
+   two same-size images shared one cached bitmap (wrong colors in any
+   thumbnail grid); animated canvases sampled stale frames. Fixed.
+3. "Web Font" badge computed in the popup's FontFaceSet (meaningless);
+   detection moved into the content script's page context. Fixed.
+4. Toolbar `●` badge never cleared on Esc-cancel; added `toolCancelled`
+   message + badge-timer hygiene. Fixed.
+5. Copy All Colors scanned only the first 500 DOM nodes in document
+   order (head/script junk burned the budget). Now body-only, skips
+   non-rendered nodes, budget 5000. Fixed.
+6. Result broadcast → popup raced the storage write (popup re-read could
+   show stale recents); broadcast now follows the write and the popup
+   dedupes direct content-script copies. Fixed.
+7. Palette import couldn't re-import the same file (input never reset).
+   Fixed.
+8. Dead `getColorFromImage/Canvas/Video` helpers removed (×3 builds).
+9. Docs: ROADMAP was never updated for v2.2.0 (now marked Shipped); PR
+   template still suggested Ctrl+Shift+P (now Alt+Shift+P); CHANGELOG
+   2.2.0 gained a Fixed section covering this addendum.
+
+## Still open (owner action)
+
+- **Manual smoke matrix** (Section 3.8 above) — still not run in a real
+  browser; required before store upload.
+- **AMO `data_collection_permissions`** — add
+  `"data_collection": { "techdata": false, "interactiondata": false }`
+  under `browser_specific_settings.gecko` before AMO upload.
+- **`host_permissions` vs store copy** — reserved owner decision.
+- dist zips are rebuilt post-fix with forward-slash entries (AMO is
+  picky about backslash paths in Windows-built zips).

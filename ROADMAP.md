@@ -91,13 +91,13 @@ Performance, accessibility, and new tools. See
 - Popup dark mode + a11y pass: focus-visible, roving tabindex, aria (2.7).
 - Recent colors management: clear button + right-click copy (2.8).
 
-## Next — pre-v2.2 (Firefox feature parity restoration)
+## Shipped — v2.2.0 (2026-07-06, Firefox feature parity restoration)
 
 Firefox v1.1.1 shipped with several Firefox-exclusive features that were
-removed in the v2.0.0 cross-browser rebuild to achieve parity. Restore the
-ones that don't compromise privacy or cost new permissions. The deep
-[CHANGELOG](./CHANGELOG.md) documents what existed; this is the plan to
-bring it back.
+removed in the v2.0.0 cross-browser rebuild to achieve parity. v2.2.0
+restored the ones that don't compromise privacy or cost new permissions —
+every item in the table below shipped, in all three builds where
+applicable. See [CHANGELOG](./CHANGELOG.md#220--2026-07-06).
 
 | Item | What it was in 1.1.1 | Complexity | New permissions | Privacy impact |
 |---|---|---|---|---|
