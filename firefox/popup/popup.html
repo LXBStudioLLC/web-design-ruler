@@ -64,6 +64,22 @@
         <button class="secondary-btn full-width" id="save-to-palette">Save to Palette</button>
       </div>
 
+      <div class="contrast-card hidden" id="contrast-card">
+        <h3>Contrast</h3>
+        <div class="contrast-slots">
+          <button class="contrast-slot" id="contrast-fg" data-slot="fg">
+            <span class="slot-label">FG</span>
+            <span class="slot-swatch" id="contrast-fg-swatch"></span>
+          </button>
+          <span class="contrast-result" id="contrast-ratio">--</span>
+          <button class="contrast-slot" id="contrast-bg" data-slot="bg">
+            <span class="slot-label">BG</span>
+            <span class="slot-swatch" id="contrast-bg-swatch"></span>
+          </button>
+        </div>
+        <div class="contrast-badges" id="contrast-badges"></div>
+      </div>
+
       <div class="recent-colors hidden" id="recent-colors">
         <div class="recent-colors-header">
           <h3>Recent Colors</h3>

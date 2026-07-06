@@ -375,6 +375,10 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     let currentTextColor = null;
     let currentPixelColor = null; // For image/canvas/video
     let currentSource = 'element'; // 'element', 'image', 'canvas', 'video'
+    let rafId = null;
+    let lastMoveEvent = null;
+    let pickerCanvas = null;
+    let pickerCanvasKey = null;
 
     // Create display panel
     const panel = createElement('div', {
@@ -395,19 +399,115 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       gap: '12px',
       pointerEvents: 'none'
     });
+
     const initSpan = createElement('span', {});
     initSpan.textContent = 'Hover over any element. Click to pick background, or click swatches below. ESC to cancel.';
-    panel.replaceChildren(initSpan);
+
+    const pixelContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' });
+    pixelContainer.dataset.colorType = 'pixel';
+    pixelContainer.title = 'Click to select pixel color';
+    pixelContainer.style.display = 'none';
+    const pixelSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
+    const pixelInfo = createElement('div', {});
+    const pixelHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+    const pixelLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
+    pixelInfo.replaceChildren(pixelHex, pixelLabel);
+    pixelContainer.replaceChildren(pixelSwatch, pixelInfo);
+
+    const bgContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s' });
+    bgContainer.dataset.colorType = 'bg';
+    bgContainer.title = 'Click to select background color';
+    bgContainer.style.display = 'none';
+    const bgSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
+    const bgInfo = createElement('div', {});
+    const bgHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+    const bgLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
+    bgLabel.textContent = 'background';
+    bgInfo.replaceChildren(bgHex, bgLabel);
+    bgContainer.replaceChildren(bgSwatch, bgInfo);
+
+    const divider = createElement('div', { width: '1px', height: '36px', background: 'rgba(255,255,255,0.3)' });
+    divider.style.display = 'none';
+
+    const textContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s' });
+    textContainer.dataset.colorType = 'text';
+    textContainer.title = 'Click to select text color';
+    textContainer.style.display = 'none';
+    const textSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
+    const textInfo = createElement('div', {});
+    const textHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+    const textLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
+    textLabel.textContent = 'text';
+    textInfo.replaceChildren(textHex, textLabel);
+    textContainer.replaceChildren(textSwatch, textInfo);
+
+    panel.replaceChildren(initSpan, pixelContainer, bgContainer, divider, textContainer);
     document.body.appendChild(panel);
+
+    function sampleMediaPixel(element, relX, relY) {
+      try {
+        const key = element.tagName + '_' + element.clientWidth + 'x' + element.clientHeight;
+        if (pickerCanvasKey !== key) {
+          pickerCanvas = document.createElement('canvas');
+          const drawCtx = pickerCanvas.getContext('2d');
+          if (element.tagName === 'IMG') {
+            pickerCanvas.width = element.naturalWidth || element.width;
+            pickerCanvas.height = element.naturalHeight || element.height;
+            drawCtx.drawImage(element, 0, 0);
+          } else if (element.tagName === 'CANVAS') {
+            pickerCanvas.width = element.width;
+            pickerCanvas.height = element.height;
+            drawCtx.drawImage(element, 0, 0);
+          } else if (element.tagName === 'VIDEO') {
+            pickerCanvas.width = element.videoWidth || element.clientWidth;
+            pickerCanvas.height = element.videoHeight || element.clientHeight;
+            drawCtx.drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
+          }
+          pickerCanvasKey = key;
+        } else if (element.tagName === 'VIDEO') {
+          const drawCtx = pickerCanvas.getContext('2d');
+          drawCtx.drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
+        }
+
+        const ctx = pickerCanvas.getContext('2d');
+        const cs = window.getComputedStyle(element);
+        const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+        const borderTop = parseFloat(cs.borderTopWidth) || 0;
+        const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+        const paddingTop = parseFloat(cs.paddingTop) || 0;
+        const contentX = relX - borderLeft - paddingLeft;
+        const contentY = relY - borderTop - paddingTop;
+        if (element.clientWidth === 0 || element.clientHeight === 0) return null;
+        const scaleX = pickerCanvas.width / element.clientWidth;
+        const scaleY = pickerCanvas.height / element.clientHeight;
+        const scaledX = Math.floor(contentX * scaleX);
+        const scaledY = Math.floor(contentY * scaleY);
+        const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
+        return '#' + [pixel[0], pixel[1], pixel[2]].map(v => {
+          const hex = v.toString(16);
+          return hex.length === 1 ? '0' + hex : hex;
+        }).join('').toUpperCase();
+      } catch (error) {
+        console.warn('[WDR] Cannot read media pixels (likely cross-origin):', error.message);
+        return null;
+      }
+    }
 
     // Event handlers
     function onMouseMove(e) {
       if (!isActive) return;
+      lastMoveEvent = e;
+      if (!rafId) rafId = requestAnimationFrame(processMove);
+    }
 
+    function processMove() {
+      rafId = null;
+      if (!isActive || !lastMoveEvent) return;
+
+      const e = lastMoveEvent;
       const element = document.elementFromPoint(e.clientX, e.clientY);
       if (!element || element === panel || panel.contains(element)) return;
 
-      // Get element bounds for relative coordinates
       const rect = element.getBoundingClientRect();
       const relX = e.clientX - rect.left;
       const relY = e.clientY - rect.top;
@@ -415,70 +515,41 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       currentPixelColor = null;
       currentSource = 'element';
 
-      // Try to get pixel color for media elements
-      if (element.tagName === 'IMG') {
-        currentPixelColor = getColorFromImage(element, relX, relY);
-        currentSource = 'image';
-      } else if (element.tagName === 'CANVAS') {
-        currentPixelColor = getColorFromCanvas(element, relX, relY);
-        currentSource = 'canvas';
-      } else if (element.tagName === 'VIDEO') {
-        currentPixelColor = getColorFromVideo(element, relX, relY);
-        currentSource = 'video';
+      if (element.tagName === 'IMG' || element.tagName === 'CANVAS' || element.tagName === 'VIDEO') {
+        currentPixelColor = sampleMediaPixel(element, relX, relY);
+        if (currentPixelColor) {
+          currentSource = element.tagName === 'IMG' ? 'image' : element.tagName === 'CANVAS' ? 'canvas' : 'video';
+        }
       }
 
-      // Always get background and text colors for regular elements
       const bgColor = getBackgroundColor(element);
       currentBgColor = rgbToHex(bgColor);
       const textColor = getTextColor(element);
       currentTextColor = rgbToHex(textColor);
 
-      // Build panel content based on element type
+      panel.style.pointerEvents = 'auto';
+
       if (currentPixelColor && currentSource !== 'element') {
-        // For media elements, show pixel color
-        const sourceLabel = currentSource === 'image' ? 'image' :
-                           currentSource === 'canvas' ? 'canvas' :
-                           currentSource === 'video' ? 'video' : '';
-        panel.style.pointerEvents = 'auto';
-        const pixelContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' });
-        pixelContainer.dataset.colorType = 'pixel';
-        pixelContainer.title = 'Click to select pixel color';
-        const pixelSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', backgroundColor: currentPixelColor, border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
-        const pixelInfo = createElement('div', {});
-        const pixelHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+        initSpan.style.display = 'none';
+        pixelContainer.style.display = 'flex';
+        bgContainer.style.display = 'none';
+        divider.style.display = 'none';
+        textContainer.style.display = 'none';
+
+        pixelSwatch.style.backgroundColor = currentPixelColor;
         pixelHex.textContent = currentPixelColor;
-        const pixelLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
-        pixelLabel.textContent = sourceLabel + ' pixel';
-        pixelInfo.replaceChildren(pixelHex, pixelLabel);
-        pixelContainer.replaceChildren(pixelSwatch, pixelInfo);
-        panel.replaceChildren(pixelContainer);
+        pixelLabel.textContent = currentSource + ' pixel';
       } else {
-        // For regular elements, show both background and text colors
-        panel.style.pointerEvents = 'auto';
-        const bgContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s' });
-        bgContainer.dataset.colorType = 'bg';
-        bgContainer.title = 'Click to select background color';
-        const bgSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', backgroundColor: currentBgColor, border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
-        const bgInfo = createElement('div', {});
-        const bgHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+        initSpan.style.display = 'none';
+        pixelContainer.style.display = 'none';
+        bgContainer.style.display = 'flex';
+        divider.style.display = '';
+        textContainer.style.display = 'flex';
+
+        bgSwatch.style.backgroundColor = currentBgColor;
         bgHex.textContent = currentBgColor;
-        const bgLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
-        bgLabel.textContent = 'background';
-        bgInfo.replaceChildren(bgHex, bgLabel);
-        bgContainer.replaceChildren(bgSwatch, bgInfo);
-        const divider = createElement('div', { width: '1px', height: '36px', background: 'rgba(255,255,255,0.3)' });
-        const textContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s' });
-        textContainer.dataset.colorType = 'text';
-        textContainer.title = 'Click to select text color';
-        const textSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', backgroundColor: currentTextColor, border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
-        const textInfo = createElement('div', {});
-        const textHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+        textSwatch.style.backgroundColor = currentTextColor;
         textHex.textContent = currentTextColor;
-        const textLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
-        textLabel.textContent = 'text';
-        textInfo.replaceChildren(textHex, textLabel);
-        textContainer.replaceChildren(textSwatch, textInfo);
-        panel.replaceChildren(bgContainer, divider, textContainer);
       }
     }
 
@@ -553,6 +624,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function cleanup() {
       if (!isActive) return;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
       activeToolCleanup = null;
       isActive = false;
 
@@ -566,6 +639,9 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       if (panel.parentNode) {
         panel.parentNode.removeChild(panel);
       }
+
+      pickerCanvas = null;
+      pickerCanvasKey = null;
 
       console.log('[WDR] Color picker cleanup complete');
     }
@@ -606,6 +682,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     let isActive = true;
     let highlightedElement = null;
     let highlightBox = null;
+    let rafId = null;
+    let lastMoveEvent = null;
 
     // Create info panel
     const panel = createElement('div', {
@@ -630,9 +708,48 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     const fontTitle = createElement('span', { fontWeight: '600' });
     fontTitle.textContent = 'Font Detector';
     fontHeader.replaceChildren(fontIcon, fontTitle);
+
     const fontInstruction = createElement('div', { color: '#9CA3AF' });
     fontInstruction.textContent = 'Hover over text to see font details. Click to select.';
-    panel.replaceChildren(fontHeader, fontInstruction);
+
+    const previewWrap = createElement('div', { padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', marginBottom: '12px' });
+    previewWrap.style.display = 'none';
+    const previewText = createElement('div', { fontSize: '18px', fontWeight: '600' });
+    previewWrap.replaceChildren(previewText);
+
+    const grid = createElement('div', { display: 'grid', gridTemplateColumns: '90px 1fr', gap: '6px', fontSize: '12px' });
+    grid.style.display = 'none';
+
+    const sizeLabel = createElement('span', { color: '#9CA3AF' });
+    sizeLabel.textContent = 'Size:';
+    const sizeValue = createElement('span', {});
+
+    const weightLabel = createElement('span', { color: '#9CA3AF' });
+    weightLabel.textContent = 'Weight:';
+    const weightValue = createElement('span', {});
+
+    const styleLabel = createElement('span', { color: '#9CA3AF' });
+    styleLabel.textContent = 'Style:';
+    const styleValue = createElement('span', {});
+
+    const colorLabel = createElement('span', { color: '#9CA3AF' });
+    colorLabel.textContent = 'Color:';
+    const colorValue = createElement('span', { display: 'flex', alignItems: 'center', gap: '6px' });
+    const colorText = createElement('span', {});
+    const colorSwatch = createElement('span', { width: '14px', height: '14px', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '2px' });
+    colorValue.replaceChildren(colorText, colorSwatch);
+
+    const lineHeightLabel = createElement('span', { color: '#9CA3AF' });
+    lineHeightLabel.textContent = 'Line Height:';
+    const lineHeightValue = createElement('span', {});
+
+    grid.replaceChildren(sizeLabel, sizeValue, weightLabel, weightValue, styleLabel, styleValue, colorLabel, colorValue, lineHeightLabel, lineHeightValue);
+
+    const fontFooter = createElement('div', { textAlign: 'center', color: '#9CA3AF', fontSize: '11px', marginTop: '12px' });
+    fontFooter.textContent = 'Click to select';
+    fontFooter.style.display = 'none';
+
+    panel.replaceChildren(fontHeader, fontInstruction, previewWrap, grid, fontFooter);
     document.body.appendChild(panel);
 
     function createHighlight(element) {
@@ -740,62 +857,34 @@ color: ${rgbToHex(style.color)};`
 
     function updatePanel(element) {
       const details = getFontDetails(element);
-      const familyDisplay = details.fontFamily;
 
-      const header = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' });
-      const headerIcon = createElement('span', { fontSize: '18px' });
-      headerIcon.textContent = 'Aa';
-      const headerTitle = createElement('span', { fontWeight: '600' });
-      headerTitle.textContent = 'Font Detector';
-      header.replaceChildren(headerIcon, headerTitle);
+      fontInstruction.style.display = 'none';
+      previewWrap.style.display = '';
+      grid.style.display = 'grid';
+      fontFooter.style.display = '';
 
-      const previewWrap = createElement('div', { padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', marginBottom: '12px' });
-      const previewText = createElement('div', { fontSize: '18px', fontWeight: '600' });
       previewText.style.fontFamily = details.fontFamilyStack;
-      previewText.textContent = familyDisplay;
-      previewWrap.replaceChildren(previewText);
+      previewText.textContent = details.fontFamily;
 
-      const grid = createElement('div', { display: 'grid', gridTemplateColumns: '90px 1fr', gap: '6px', fontSize: '12px' });
-
-      const sizeLabel = createElement('span', { color: '#9CA3AF' });
-      sizeLabel.textContent = 'Size:';
-      const sizeValue = createElement('span', {});
       sizeValue.textContent = details.fontSize;
-
-      const weightLabel = createElement('span', { color: '#9CA3AF' });
-      weightLabel.textContent = 'Weight:';
-      const weightValue = createElement('span', {});
       weightValue.textContent = details.fontWeight;
-
-      const styleLabel = createElement('span', { color: '#9CA3AF' });
-      styleLabel.textContent = 'Style:';
-      const styleValue = createElement('span', {});
       styleValue.textContent = details.fontStyle;
-
-      const colorLabel = createElement('span', { color: '#9CA3AF' });
-      colorLabel.textContent = 'Color:';
-      const colorValue = createElement('span', { display: 'flex', alignItems: 'center', gap: '6px' });
-      const colorText = createElement('span', {});
       colorText.textContent = details.color;
-      const colorSwatch = createElement('span', { width: '14px', height: '14px', background: details.color, border: '1px solid rgba(255,255,255,0.3)', borderRadius: '2px' });
-      colorValue.replaceChildren(colorText, colorSwatch);
-
-      const lineHeightLabel = createElement('span', { color: '#9CA3AF' });
-      lineHeightLabel.textContent = 'Line Height:';
-      const lineHeightValue = createElement('span', {});
+      colorSwatch.style.background = details.color;
       lineHeightValue.textContent = details.lineHeight;
-
-      grid.replaceChildren(sizeLabel, sizeValue, weightLabel, weightValue, styleLabel, styleValue, colorLabel, colorValue, lineHeightLabel, lineHeightValue);
-
-      const footer = createElement('div', { textAlign: 'center', color: '#9CA3AF', fontSize: '11px', marginTop: '12px' });
-      footer.textContent = 'Click to select';
-
-      panel.replaceChildren(header, previewWrap, grid, footer);
     }
 
     function onMouseMove(e) {
       if (!isActive) return;
+      lastMoveEvent = e;
+      if (!rafId) rafId = requestAnimationFrame(processMove);
+    }
 
+    function processMove() {
+      rafId = null;
+      if (!isActive || !lastMoveEvent) return;
+
+      const e = lastMoveEvent;
       const element = document.elementFromPoint(e.clientX, e.clientY);
       if (!element || element === panel || panel.contains(element) || (highlightBox && highlightBox.contains(element))) return;
       if (element === highlightedElement) return;
@@ -840,6 +929,8 @@ color: ${rgbToHex(style.color)};`
 
     function cleanup() {
       if (!isActive) return;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
       activeToolCleanup = null;
       isActive = false;
 
@@ -880,6 +971,8 @@ color: ${rgbToHex(style.color)};`
     let isActive = true;
     let isDrawing = false;
     let startX = 0, startY = 0, endX = 0, endY = 0;
+    let rafId = null;
+    let lastMoveEvent = null;
 
     // Create overlay to capture mouse events
     const overlay = createElement('div', {
@@ -949,9 +1042,38 @@ color: ${rgbToHex(style.color)};`
     const measureTitle = createElement('span', { fontWeight: '600' });
     measureTitle.textContent = 'Measurement Tool';
     measureHeader.replaceChildren(measureIcon, measureTitle);
+
     const measureInstruction = createElement('div', { color: '#9CA3AF' });
     measureInstruction.textContent = 'Click and drag to measure';
-    panel.replaceChildren(measureHeader, measureInstruction);
+
+    const mGrid = createElement('div', { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' });
+    mGrid.style.display = 'none';
+
+    const wCell = createElement('div', {});
+    const wLabel = createElement('span', { color: '#9CA3AF' });
+    wLabel.textContent = 'W:';
+    const wValue = createElement('span', {});
+    wCell.replaceChildren(wLabel, wValue);
+
+    const hCell = createElement('div', {});
+    const hLabel = createElement('span', { color: '#9CA3AF' });
+    hLabel.textContent = 'H:';
+    const hValue = createElement('span', {});
+    hCell.replaceChildren(hLabel, hValue);
+
+    const dCell = createElement('div', {});
+    const dLabel = createElement('span', { color: '#9CA3AF' });
+    dLabel.textContent = 'D:';
+    const dValue = createElement('span', {});
+    dCell.replaceChildren(dLabel, dValue);
+
+    mGrid.replaceChildren(wCell, hCell, dCell);
+
+    const mFooter = createElement('div', { color: '#9CA3AF', fontSize: '11px', marginTop: '10px' });
+    mFooter.textContent = 'Release to save';
+    mFooter.style.display = 'none';
+
+    panel.replaceChildren(measureHeader, measureInstruction, mGrid, mFooter);
     document.body.appendChild(panel);
 
     function updateMeasurement() {
@@ -982,42 +1104,14 @@ color: ${rgbToHex(style.color)};`
       diagonalLabel.style.left = Math.max(2, left + width / 2 - 20) + 'px';
       diagonalLabel.style.top = (top + height / 2 - 10) + 'px';
 
-      const mHeader = createElement('div', { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' });
-      const mIcon = createElement('span', { fontSize: '18px' });
-      mIcon.textContent = '\u{1F4CF}';
-      const mTitle = createElement('span', { fontWeight: '600' });
-      mTitle.textContent = 'Measurement Tool';
-      mHeader.replaceChildren(mIcon, mTitle);
+      measureInstruction.style.display = 'none';
+      measureHeader.style.marginBottom = '12px';
+      mGrid.style.display = 'grid';
+      mFooter.style.display = '';
 
-      const mGrid = createElement('div', { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' });
-
-      const wCell = createElement('div', {});
-      const wLabel = createElement('span', { color: '#9CA3AF' });
-      wLabel.textContent = 'W:';
-      const wValue = createElement('span', {});
       wValue.textContent = ' ' + width + 'px';
-      wCell.replaceChildren(wLabel, wValue);
-
-      const hCell = createElement('div', {});
-      const hLabel = createElement('span', { color: '#9CA3AF' });
-      hLabel.textContent = 'H:';
-      const hValue = createElement('span', {});
       hValue.textContent = ' ' + height + 'px';
-      hCell.replaceChildren(hLabel, hValue);
-
-      const dCell = createElement('div', {});
-      const dLabel = createElement('span', { color: '#9CA3AF' });
-      dLabel.textContent = 'D:';
-      const dValue = createElement('span', {});
       dValue.textContent = ' ' + diagonal + 'px';
-      dCell.replaceChildren(dLabel, dValue);
-
-      mGrid.replaceChildren(wCell, hCell, dCell);
-
-      const mFooter = createElement('div', { color: '#9CA3AF', fontSize: '11px', marginTop: '10px' });
-      mFooter.textContent = 'Release to save';
-
-      panel.replaceChildren(mHeader, mGrid, mFooter);
     }
 
     function onMouseDown(e) {
@@ -1030,8 +1124,15 @@ color: ${rgbToHex(style.color)};`
 
     function onMouseMove(e) {
       if (!isActive || !isDrawing) return;
-      endX = e.clientX;
-      endY = e.clientY;
+      lastMoveEvent = e;
+      if (!rafId) rafId = requestAnimationFrame(processMove);
+    }
+
+    function processMove() {
+      rafId = null;
+      if (!isActive || !isDrawing || !lastMoveEvent) return;
+      endX = lastMoveEvent.clientX;
+      endY = lastMoveEvent.clientY;
       updateMeasurement();
     }
 
@@ -1074,6 +1175,8 @@ color: ${rgbToHex(style.color)};`
 
     function cleanup() {
       if (!isActive) return;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
       activeToolCleanup = null;
       isActive = false;
 

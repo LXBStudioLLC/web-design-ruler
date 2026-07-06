@@ -9,6 +9,9 @@
 let currentPaletteName = null;
 let palettes = {};
 let removeColorTarget = null;
+let contrastFg = null;
+let contrastBg = '#FFFFFF';
+let armedSlot = null;
 
 // ============================================================================
 // INITIALIZATION
@@ -22,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeToolButtons();
   initializeCopyButtons();
   initializePalettes();
+  initializeContrast();
   document.getElementById('toggle-saved-fonts').addEventListener('click', () => {
     const list = document.getElementById('saved-fonts-list');
     const btn = document.getElementById('toggle-saved-fonts');
@@ -200,6 +204,10 @@ function displayPickedColor(color) {
       document.querySelector('[data-tab="palettes"]').click();
     }
   };
+
+  document.getElementById('contrast-card').classList.remove('hidden');
+  contrastFg = color;
+  updateContrast();
 }
 
 function displayRecentColors(colors) {
@@ -620,6 +628,16 @@ function createColorSwatch(color) {
   swatch.style.backgroundColor = color;
   swatch.setAttribute('data-color', color);
   swatch.title = color;
+  swatch.addEventListener('click', (e) => {
+    if (armedSlot) {
+      e.stopImmediatePropagation();
+      if (armedSlot === 'fg') contrastFg = color;
+      else contrastBg = color;
+      armedSlot = null;
+      document.querySelectorAll('.contrast-slot').forEach(s => s.classList.remove('armed'));
+      updateContrast();
+    }
+  });
   return swatch;
 }
 
@@ -774,4 +792,70 @@ function rgbToHsl(r, g, b) {
     s: Math.round(s * 100),
     l: Math.round(l * 100)
   };
+}
+
+function relativeLuminance(r, g, b) {
+  const lin = (c) => {
+    const cs = c / 255;
+    return cs <= 0.04045 ? cs / 12.92 : Math.pow((cs + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function contrastRatio(hex1, hex2) {
+  const rgb1 = hexToRgb(hex1);
+  const rgb2 = hexToRgb(hex2);
+  const l1 = relativeLuminance(rgb1.r, rgb1.g, rgb1.b);
+  const l2 = relativeLuminance(rgb2.r, rgb2.g, rgb2.b);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function updateContrast() {
+  if (!contrastFg || !contrastBg) return;
+  const ratio = contrastRatio(contrastFg, contrastBg);
+  document.getElementById('contrast-fg-swatch').style.backgroundColor = contrastFg;
+  document.getElementById('contrast-bg-swatch').style.backgroundColor = contrastBg;
+  document.getElementById('contrast-ratio').textContent = ratio.toFixed(1);
+
+  const badges = document.getElementById('contrast-badges');
+  badges.replaceChildren();
+  const checks = [
+    { label: 'AA', threshold: 4.5 },
+    { label: 'AA Large', threshold: 3.0 },
+    { label: 'AAA', threshold: 7.0 },
+    { label: 'AAA Large', threshold: 4.5 }
+  ];
+  checks.forEach(c => {
+    const badge = document.createElement('span');
+    badge.className = 'contrast-badge ' + (ratio >= c.threshold ? 'pass' : 'fail');
+    badge.textContent = c.label;
+    badges.appendChild(badge);
+  });
+}
+
+function initializeContrast() {
+  document.getElementById('contrast-fg').addEventListener('click', () => {
+    const slot = document.getElementById('contrast-fg');
+    if (armedSlot === 'fg') {
+      armedSlot = null;
+      slot.classList.remove('armed');
+    } else {
+      armedSlot = 'fg';
+      document.querySelectorAll('.contrast-slot').forEach(s => s.classList.remove('armed'));
+      slot.classList.add('armed');
+    }
+  });
+  document.getElementById('contrast-bg').addEventListener('click', () => {
+    const slot = document.getElementById('contrast-bg');
+    if (armedSlot === 'bg') {
+      armedSlot = null;
+      slot.classList.remove('armed');
+    } else {
+      armedSlot = 'bg';
+      document.querySelectorAll('.contrast-slot').forEach(s => s.classList.remove('armed'));
+      slot.classList.add('armed');
+    }
+  });
 }
