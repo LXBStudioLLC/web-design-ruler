@@ -12,6 +12,82 @@ a sidebar UI cut before AMO submission. Newest first.
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-07-06
+
+Phase 1 audit cleanup: 11 bug fixes across all three builds. No new
+permissions, no new dependencies, no telemetry. Offline-by-design preserved.
+
+### Fixed
+
+- **Tool stacking corrupts page styles** (Fix 1.1). No mutual exclusion
+  between tools — activating a second tool captured the first tool's
+  modified cursor/userSelect as "original," leaving the page stuck with a
+  crosshair cursor and no text selection. Added module-scoped
+  `activeToolCleanup`; activating a new tool runs the previous cleanup
+  *before* snapshotting body styles.
+- **"+ New Palette" silently overwrites existing** (Fix 1.2).
+  `createPalette` assigned unconditionally; typing an existing name erased
+  its colors. Now accepts `{ overwrite }` option and returns `false` with
+  `'exists'` reason. Import auto-renames to `Name (2)`, `Name (3)`, … and
+  validates colors (≤ 200 hex strings, 3-digit normalized to 6).
+- **Keyboard shortcuts collide with browser built-ins** (Fix 1.3).
+  `Ctrl+Shift+R` (hard reload) and `Ctrl+Shift+P` (Private/InPrivate)
+  never bound. Switched to `Alt+Shift+R/P` for popup and color picker.
+  Added `activate_font_detector` (`Alt+Shift+F`) and
+  `activate_measure_tool` (`Alt+Shift+M`) — 4 commands total, the Chrome
+  maximum.
+- **Palette CRUD used `prompt()`/`confirm()`** (Fix 1.4). Native dialogs
+  are unreliable in extension popups. Replaced with inline UI: create/rename
+  use inline input rows (Enter/Esc), delete uses a two-step confirm button
+  (3 s window), remove-color uses a floating confirm chip (click-away/Esc
+  cancel). Keyboard accessible with real `<button>`s and `aria-label`s.
+- **`recentColors` double-writer race** (Fix 1.5). Content script and
+  background both did read-modify-write on `recentColors` with different
+  dedupe semantics. Content script no longer writes storage — it only
+  `sendMessage`s. Background remains the single writer with move-to-front
+  dedupe and 20-item cap.
+- **Content script throws after extension reload** (Fix 1.6).
+  `chrome.runtime.sendMessage` throws "Extension context invalidated"
+  synchronously after update/reload, killing the confirmation UI and
+  cleanup timer. Added `extAlive()`/`safeSend()` helpers; all
+  `sendMessage` calls route through them. Tool still completes local UX.
+- **Font detector inspects its own panel** (Fix 1.7). `onMouseMove`
+  checked `element === panel` but missed descendants. Changed to
+  `panel.contains(element)` and `highlightBox.contains(element)`.
+- **"Save Font" writes data no UI shows** (Fix 1.8). Added a collapsible
+  "Saved Fonts" list in the Font tab (up to 10 entries, clickable to
+  re-display, ✕ remove). Built with `createElement`/`textContent`.
+- **Edge keep-alive alarm below platform minimum** (Fix 1.9).
+  `KEEP_ALIVE_INTERVAL_MINUTES = 0.4` (24 s) was below Chromium's ≥ 30 s
+  clamp. Renamed to `WAKE_UP_INTERVAL_MINUTES`, set to 0.5. Comments and
+  AUDIT.md corrected: the alarm is a wake-up, not a keep-alive.
+- **`innerHTML` with page-controlled strings** (Fix 1.10). Font stack
+  strings from inspected pages flowed into `innerHTML`, enabling markup
+  injection. Rebuilt all panel updates and `displayFontDetails` with
+  `createElement`/`textContent`; font-family stacks applied via
+  `style.fontFamily` property. Zero `innerHTML` in content scripts.
+- **Correctness edge-case batch** (Fix 1.11): image/canvas/video pixel
+  coords subtract border+padding before scaling (divide-by-zero guards);
+  `rgbToHex` canvas fallback for `color(srgb)`/`lab()`; context-menu
+  passes `tab` through to `activateTool`; popup version badge from
+  manifest; measure labels clamped to viewport; measure `mouseup` on
+  `window` + `mouseleave` on `documentElement`; `.notification.info` CSS;
+  font preview uses `fontFamilyStack` (guarded); `fontWeight.split`
+  guarded with `String()`; `onMessage` cases return `false`; removed
+  dead `selectedColorType`.
+
+### Changed
+- All three manifests bumped `2.0.1` → `2.0.2`.
+- Keyboard shortcuts changed from `Ctrl+Shift+R/P` to `Alt+Shift+R/P/F/M`.
+- Edge alarm constant renamed `KEEP_ALIVE_INTERVAL_MINUTES` →
+  `WAKE_UP_INTERVAL_MINUTES` (alarm name `wdr-keep-alive` unchanged).
+
+### Store status
+- **Firefox AMO** — pending upload.
+- **Chrome Web Store** — pending upload.
+- **Edge Add-ons** — pending upload.
+- **GitHub** — branch `fix/v2.0.2` pushed; no tag (deep check first).
+
 ## [2.0.1] — 2026-05-23
 
 Firefox popup-handler fix. One file, one function, real user impact.

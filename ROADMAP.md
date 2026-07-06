@@ -39,14 +39,41 @@ The highest-impact audit finding shipped as a point release:
   `browser.runtime.sendMessage`. Tool buttons in the Firefox popup actually
   do something now. See [CHANGELOG](./CHANGELOG.md#201--2026-05-23).
 
-## Next — v2.0.2 (remaining audit cleanup, before store upload)
+## Shipped — v2.0.2 (2026-07-06)
 
-| Item | Why it ships in 2.0.2 | Complexity | New permissions | Privacy impact |
-|---|---|---|---|---|
-| **Reconcile permissions with marketing copy** | Store listing says "only accesses active tab when tools explicitly activated", but `host_permissions: ["http://*/*","https://*/*"]` + static `content_scripts` means the script loads on every page. Two paths: (a) drop `host_permissions` + static `content_scripts`, rely on dynamic `scripting.executeScript`; (b) reword the marketing copy. Decision pending. | S (rewording) or M (manifest tightening + re-test) | Removes a permission if path (a) | Positive either way |
-| **Replace fixed-interval Edge retries with real exponential backoff** | README claims exponential backoff; `edge/background.js:264-282` uses fixed 200 ms. Either rename to "fixed interval" or actually backoff (200, 400, 800 ms). | XS | None | None |
-| **Remove dead code: `selectedColorType`, `hasEyeDropperAPI`** | `chrome/scripts/content-script.js:346` and `:142-144` are unreachable in shipped code. Already removed from Firefox build. | XS | None | None |
-| **Unify restricted-URL pattern list across builds** | Chrome/Edge list includes `chrome-extension://` and `edge://`; Firefox omits them. Behaviorally equivalent but a source of confusion when triaging. | XS | None | None |
+Phase 1 audit cleanup: 11 bug fixes across all three builds. See
+[CHANGELOG](./CHANGELOG.md#202--2026-07-06) for the full list. Headline:
+
+- Tool stacking no longer corrupts page cursor/text-selection (mutual
+  exclusion via `activeToolCleanup`).
+- Palette create/import no longer overwrites existing palettes; import
+  validates and auto-renames.
+- Keyboard shortcuts changed to `Alt+Shift+R/P/F/M` (were `Ctrl+Shift+R/P`,
+  which collided with browser built-ins). Two new commands added.
+- All `prompt()`/`confirm()` replaced with inline UI (create, rename,
+  delete, remove-color).
+- Background is the single storage writer; content scripts only `sendMessage`.
+- `safeSend()` guards against invalidated extension context.
+- Font detector no longer inspects its own panel.
+- Saved Fonts list added to Font tab.
+- Edge alarm corrected (wake-up, not keep-alive).
+- All `innerHTML` with page-controlled strings rebuilt with
+  `createElement`/`textContent`.
+- 10-item correctness batch (pixel coords, modern colors, tab passthrough,
+  version badge, label clamping, drag-outside-window, notification CSS,
+  font preview family, return-true sync, dead code removal).
+
+**`hasEyeDropperAPI`/`activateColorPickerEyeDropper`/`showColorPickedToast`
+intentionally retained** — Phase 2 (Feature 2.3) wires them up via an
+options-page toggle.
+
+## Next — pre-v2.1 (remaining audit cleanup)
+
+| Item | Why it's deferred | Complexity |
+|---|---|---|
+| **Reconcile permissions with marketing copy** | Reserved owner decision (Section 13 of the implementation brief). Two paths: drop `host_permissions` + static `content_scripts`, or reword the store listing. | S or M |
+| **Replace fixed-interval Edge retries with real exponential backoff** | README claims exponential backoff; code uses fixed 200 ms. Not in Phase 1 scope. | XS |
+| **Unify restricted-URL pattern list across builds** | Chrome/Edge list includes `chrome-extension://` and `edge://`; Firefox omits them. Behaviorally equivalent. | XS |
 
 ---
 
@@ -78,7 +105,6 @@ bring it back.
 | **Toolbar badge state animation** | Green `●` while a tool is active, `✓` after a successful pick/detect/measure, cleared after 2 s. Visual confirmation without opening the popup. | S | None | None |
 | **Nested "Web Design Ruler" right-click submenu** | Parent menu with emoji-prefixed children (`🎨 Pick Color`, `🔤 Identify Font`, `📐 Measure Element`) and a separator. v2.0.0 flattened these into three siblings. | XS | None | None |
 | **"Copy All Colors on Page" context-menu action** | Walks the DOM, dedupes computed colors, builds an auto-named palette, copies as CSS custom properties to the clipboard. A workflow win that designers reach for often. | M | None | None |
-| **Restore extra keyboard shortcuts** | v1.1.1 had Ctrl+Shift+F for Font Detector and Ctrl+Shift+M for Measurement Tool. v2.0.0 dropped both — only the popup-open (Ctrl+Shift+R) and color-picker (Ctrl+Shift+P) shortcuts remain. | XS | None | None |
 | **Theme awareness** | `browser.theme.onUpdated` listener + `getThemeColors` message handler — designed to drive theme-aware palette suggestions on Firefox. Currently registered nowhere in 2.0.x. | S | None (Firefox only API) | None |
 | **Firefox-themed default palette** | v1.1.1 seeded a "Firefox Theme" palette (`#FF9500`, `#002147`, `#00FEFF`, `#B1B1B3`, `#FFFFFF`) alongside LXB Studio / Material Design / Neutrals. v2.0.0 reduced defaults to two generic palettes. Worth restoring as a per-build seed. | XS | None | None |
 | **Resurrect the sidebar UI** | An unreleased `sidebar/panel.html` exists in the pre-1.1.1 Firefox dev build (cut before AMO submission). Firefox supports `sidebar_action` natively; could be a docked panel for picked colors + recent measurements. | L | `sidebar_action` (Firefox-only manifest key) | None |
