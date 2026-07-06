@@ -302,6 +302,10 @@ browserAPI.commands.onCommand.addListener((command) => {
   console.log('[WDR-Firefox] Command received:', command);
   if (command === 'activate_eyedropper') {
     activateTool('activateColorPicker');
+  } else if (command === 'activate_font_detector') {
+    activateTool('activateFontDetector');
+  } else if (command === 'activate_measure_tool') {
+    activateTool('activateMeasureTool');
   }
 });
 

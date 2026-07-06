@@ -44,17 +44,31 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Ctrl+Shift+R",
-        "mac": "Command+Shift+R"
+        "default": "Alt+Shift+R",
+        "mac": "Alt+Shift+R"
       },
       "description": "Open Web Design Ruler"
     },
     "activate_eyedropper": {
       "suggested_key": {
-        "default": "Ctrl+Shift+P",
-        "mac": "Command+Shift+P"
+        "default": "Alt+Shift+P",
+        "mac": "Alt+Shift+P"
       },
       "description": "Activate the Color Picker"
+    },
+    "activate_font_detector": {
+      "suggested_key": {
+        "default": "Alt+Shift+F",
+        "mac": "Alt+Shift+F"
+      },
+      "description": "Activate the Font Detector"
+    },
+    "activate_measure_tool": {
+      "suggested_key": {
+        "default": "Alt+Shift+M",
+        "mac": "Alt+Shift+M"
+      },
+      "description": "Activate the Measurement Tool"
     }
   },
   "web_accessible_resources": [
