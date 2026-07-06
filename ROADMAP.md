@@ -77,21 +77,21 @@ options-page toggle.
 
 ---
 
-## Soon — v2.1 (next minor)
+## Shipped — v2.1.0 (2026-07-06)
 
-Performance and small polish items where the user-visible payoff is clear and
-the implementation cost is bounded.
+Performance, accessibility, and new tools. See
+[CHANGELOG](./CHANGELOG.md#210--2026-07-06). Headline:
 
-| Item | User pain it solves | Complexity | New permissions | Privacy impact |
-|---|---|---|---|---|
-| **Throttle `mousemove` paths through `requestAnimationFrame`** | Picker, font, and measurement handlers all run on raw `mousemove`. The picker even allocates a fresh `<canvas>` and runs `getImageData(1,1)` per event when hovering an `<img>`/`<video>` — visible CPU cost on pages with ≥120 Hz pointer events. | S | None | None |
-| **Switch `panel.innerHTML = template` to direct text-node updates** | Eliminates HTML re-parse per mouse event. Cleaner perf trace; smaller jank when WDR is active. | M | None | None |
-| **Native EyeDropper opt-in on Chrome/Edge** | `window.EyeDropper` is available on Chromium; the visual fallback panel currently runs even when the native API would be faster and more accurate. Add a popup toggle to choose. | S | None | None |
-| **Logging tag unification + verbosity toggle** | Each build uses a different `[WDR-*]` prefix; useful, but no way for users to silence verbose logs in production. A simple `chrome.storage.local`-backed `wdrDebug` flag would handle it. | S | None | None |
+- rAF-throttled mousemove + per-element canvas cache (Feature 2.1).
+- Panel updates via cached text nodes — zero DOM allocation per move (2.2).
+- Options page with native EyeDropper opt-in + debug logging toggle (2.3).
+- WCAG contrast checker in Color tab (2.4).
+- Copy as CSS export from stored picks/detections/measurements (2.5).
+- Copy buttons for W/H/D measurements (2.6).
+- Popup dark mode + a11y pass: focus-visible, roving tabindex, aria (2.7).
+- Recent colors management: clear button + right-click copy (2.8).
 
----
-
-## After 2.1 — v2.2 (Firefox feature parity restoration)
+## Next — pre-v2.2 (Firefox feature parity restoration)
 
 Firefox v1.1.1 shipped with several Firefox-exclusive features that were
 removed in the v2.0.0 cross-browser rebuild to achieve parity. Restore the

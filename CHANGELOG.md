@@ -12,6 +12,41 @@ a sidebar UI cut before AMO submission. Newest first.
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-07-06
+
+Performance, accessibility, and new tools. No new permissions (options
+page uses existing `storage`). Offline-by-design preserved.
+
+### Added
+- **rAF-throttled mousemove** (Feature 2.1). All three tools' mousemove
+  handlers now route through `requestAnimationFrame` (max one DOM pass
+  per frame). Picker caches sampling canvas per hovered media element.
+- **WCAG contrast checker** (Feature 2.4). Two slots (FG/BG) in the Color
+  tab with armed-click-to-fill from any swatch. Shows ratio and pass/fail
+  badges for AA/AAA normal/large.
+- **Copy as CSS** (Feature 2.5). Button assembles a CSS snippet from
+  stored color, font, and measurement data. Disabled when nothing stored.
+- **Measurement copy buttons** (Feature 2.6). Copy buttons next to W/H/D
+  inputs (copies as `240px`).
+- **Recent colors management** (Feature 2.8). Clear button (two-step
+  confirm) + right-click swatch to copy hex.
+- **Options page** (Feature 2.3). `options/options.{html,css,js}` with
+  native EyeDropper opt-in (Chrome/Edge) and debug logging toggle.
+
+### Changed
+- **Panel updates via cached text nodes** (Feature 2.2). Panel skeletons
+  created once per activation; move handlers update only `textContent`/
+  style props. Zero DOM allocation per move.
+- **Dark mode** (Feature 2.7). `@media (prefers-color-scheme: dark)`
+  overrides using existing CSS variables. Brand blue preserved.
+- **Accessibility** (Feature 2.7). `:focus-visible` outlines, `aria-
+  controls` on tabs, roving-tabindex arrow navigation, `role="button"`/
+  `aria-label`/`tabindex` on swatches with Enter/Space activation.
+- **Debug logging** (Feature 2.3). `log()` helper routes `console.log`
+  chatter; no-ops unless the option is enabled. `console.warn`/`error`
+  remain unconditional.
+- All three manifests bumped `2.0.2` → `2.1.0`. `options_ui` registered.
+
 ## [2.0.2] — 2026-07-06
 
 Phase 1 audit cleanup: 11 bug fixes across all three builds. No new
