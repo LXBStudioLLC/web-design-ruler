@@ -92,20 +92,35 @@ function initializeTabs() {
   const tabPanes = document.querySelectorAll('.tab-pane');
 
   tabButtons.forEach(button => {
+    button.setAttribute('aria-controls', button.getAttribute('data-tab') + '-tab');
+    button.setAttribute('tabindex', button.classList.contains('active') ? '0' : '-1');
     button.addEventListener('click', () => {
-      // Update ARIA states
       tabButtons.forEach(btn => {
         btn.classList.remove('active');
         btn.setAttribute('aria-selected', 'false');
+        btn.setAttribute('tabindex', '-1');
       });
       tabPanes.forEach(pane => pane.classList.remove('active'));
-
       button.classList.add('active');
       button.setAttribute('aria-selected', 'true');
-
+      button.setAttribute('tabindex', '0');
       const tabId = button.getAttribute('data-tab') + '-tab';
       document.getElementById(tabId).classList.add('active');
     });
+  });
+
+  document.querySelector('.tabs').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const buttons = Array.from(tabButtons);
+    const currentIndex = buttons.findIndex(b => b.classList.contains('active'));
+    let newIndex;
+    if (e.key === 'ArrowLeft') {
+      newIndex = currentIndex <= 0 ? buttons.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex >= buttons.length - 1 ? 0 : currentIndex + 1;
+    }
+    buttons[newIndex].focus();
+    buttons[newIndex].click();
   });
 }
 
@@ -627,6 +642,9 @@ function createColorSwatch(color) {
   swatch.className = 'color-swatch-small';
   swatch.style.backgroundColor = color;
   swatch.setAttribute('data-color', color);
+  swatch.setAttribute('role', 'button');
+  swatch.setAttribute('aria-label', color);
+  swatch.setAttribute('tabindex', '0');
   swatch.title = color;
   swatch.addEventListener('click', (e) => {
     if (armedSlot) {
@@ -636,6 +654,12 @@ function createColorSwatch(color) {
       armedSlot = null;
       document.querySelectorAll('.contrast-slot').forEach(s => s.classList.remove('armed'));
       updateContrast();
+    }
+  });
+  swatch.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      swatch.click();
     }
   });
   return swatch;

@@ -780,3 +780,71 @@ footer a:hover {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gray-50: #1a1a2e;
+    --gray-100: #16213e;
+    --gray-200: #2a2a4a;
+    --gray-300: #3a3a5a;
+    --gray-400: #6a6a8a;
+    --gray-500: #8a8aaa;
+    --gray-600: #aaaaca;
+    --gray-700: #cccccc;
+    --gray-800: #e0e0e0;
+    --gray-900: #f0f0f0;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.4);
+  }
+
+  body {
+    background: var(--gray-50);
+    color: var(--gray-800);
+  }
+
+  .header {
+    background: #0d0d1a;
+  }
+
+  .color-result, .font-result, .measure-result, .current-palette, .contrast-card {
+    background: var(--gray-100);
+  }
+
+  .color-value input, .measurement input, #palette-selector, .inline-input-row input, #rename-palette-input {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+    color: var(--gray-800);
+  }
+
+  .secondary-btn {
+    background: var(--gray-200);
+    color: var(--gray-700);
+    border-color: var(--gray-300);
+  }
+
+  .copy-btn {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+  }
+
+  .font-preview {
+    background: var(--gray-200);
+  }
+
+  .saved-font-item {
+    background: var(--gray-200);
+  }
+
+  .notification.info {
+    background: var(--gray-700);
+  }
+
+  footer {
+    border-top-color: var(--gray-300);
+  }
+}
