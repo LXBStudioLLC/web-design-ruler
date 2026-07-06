@@ -196,15 +196,17 @@ async function ensureContentScript(tabId) {
 // TOOL ACTIVATION
 // ============================================================================
 
-async function activateTool(actionType) {
+async function activateTool(actionType, tab = null) {
   try {
-    const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
 
-    if (!tabs || tabs.length === 0) {
-      return { success: false, error: 'No active tab found' };
+      if (!tabs || tabs.length === 0) {
+        return { success: false, error: 'No active tab found' };
+      }
+
+      tab = tabs[0];
     }
-
-    const tab = tabs[0];
 
     if (!isValidUrl(tab.url)) {
       return {
@@ -241,7 +243,7 @@ browserAPI.contextMenus.onClicked.addListener((info, tab) => {
   console.log('[WDR-Firefox] Context menu clicked:', info.menuItemId);
   const menuItem = MENU_ITEMS.find(item => item.id === info.menuItemId);
   if (menuItem) {
-    activateTool(menuItem.action);
+    activateTool(menuItem.action, tab);
   }
 });
 

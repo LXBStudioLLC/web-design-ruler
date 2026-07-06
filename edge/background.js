@@ -287,20 +287,20 @@ async function ensureContentScript(tabId) {
 
 async function activateTool(actionType) {
   try {
-    // Get active tab
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    // EDGE-SPECIFIC: Check lastError after query
-    if (chrome.runtime.lastError) {
-      console.error('[WDR-Edge] Tab query error:', chrome.runtime.lastError.message);
-      return { success: false, error: 'Failed to get active tab' };
+      if (chrome.runtime.lastError) {
+        console.error('[WDR-Edge] Tab query error:', chrome.runtime.lastError.message);
+        return { success: false, error: 'Failed to get active tab' };
+      }
+
+      if (!tabs || tabs.length === 0) {
+        return { success: false, error: 'No active tab found' };
+      }
+
+      tab = tabs[0];
     }
-
-    if (!tabs || tabs.length === 0) {
-      return { success: false, error: 'No active tab found' };
-    }
-
-    const tab = tabs[0];
 
     // Validate URL
     if (!isValidUrl(tab.url)) {
@@ -349,7 +349,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   console.log('[WDR-Edge] Context menu clicked:', info.menuItemId);
   const menuItem = MENU_ITEMS.find(item => item.id === info.menuItemId);
   if (menuItem) {
-    activateTool(menuItem.action);
+    activateTool(menuItem.action, tab);
   }
 });
 

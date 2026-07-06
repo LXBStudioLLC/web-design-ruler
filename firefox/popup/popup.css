@@ -589,6 +589,11 @@ footer a:hover {
   color: white;
 }
 
+.notification.info {
+  background: var(--gray-800);
+  color: white;
+}
+
 @keyframes slideUp {
   from {
     transform: translate(-50%, 100%);

@@ -37,22 +37,31 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
    * @param {string} rgb - RGB or RGBA color string
    * @returns {string} - HEX color string
    */
+  let _colorCanvas = null;
   function rgbToHex(rgb) {
     if (!rgb) return '#000000';
     if (rgb.startsWith('#')) return rgb.toUpperCase();
 
     try {
       const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-      if (!match) return '#000000';
+      if (match) {
+        const r = parseInt(match[1], 10);
+        const g = parseInt(match[2], 10);
+        const b = parseInt(match[3], 10);
 
-      const r = parseInt(match[1], 10);
-      const g = parseInt(match[2], 10);
-      const b = parseInt(match[3], 10);
+        return '#' + [r, g, b].map(x => {
+          const hex = x.toString(16);
+          return hex.length === 1 ? '0' + hex : hex;
+        }).join('').toUpperCase();
+      }
 
-      return '#' + [r, g, b].map(x => {
-        const hex = x.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('').toUpperCase();
+      if (!_colorCanvas) _colorCanvas = document.createElement('canvas');
+      _colorCanvas.width = 1; _colorCanvas.height = 1;
+      const ctx = _colorCanvas.getContext('2d');
+      ctx.fillStyle = rgb;
+      ctx.fillRect(0, 0, 1, 1);
+      const pixel = ctx.getImageData(0, 0, 1, 1).data;
+      return '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
     } catch (error) {
       console.error('[WDR] RGB to HEX conversion error:', error);
       return '#000000';
@@ -165,11 +174,19 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
       ctx.drawImage(img, 0, 0);
 
-      // Scale coordinates if image is displayed at different size
+      const rect = img.getBoundingClientRect();
+      const cs = window.getComputedStyle(img);
+      const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+      const borderTop = parseFloat(cs.borderTopWidth) || 0;
+      const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+      const paddingTop = parseFloat(cs.paddingTop) || 0;
+      const contentX = x - borderLeft - paddingLeft;
+      const contentY = y - borderTop - paddingTop;
+      if (img.clientWidth === 0 || img.clientHeight === 0) return null;
       const scaleX = canvas.width / img.clientWidth;
       const scaleY = canvas.height / img.clientHeight;
-      const scaledX = Math.floor(x * scaleX);
-      const scaledY = Math.floor(y * scaleY);
+      const scaledX = Math.floor(contentX * scaleX);
+      const scaledY = Math.floor(contentY * scaleY);
 
       const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
 
@@ -194,10 +211,19 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   function getColorFromCanvas(canvas, x, y) {
     try {
       const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      const cs = window.getComputedStyle(canvas);
+      const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+      const borderTop = parseFloat(cs.borderTopWidth) || 0;
+      const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+      const paddingTop = parseFloat(cs.paddingTop) || 0;
+      const contentX = x - borderLeft - paddingLeft;
+      const contentY = y - borderTop - paddingTop;
+      if (canvas.clientWidth === 0 || canvas.clientHeight === 0) return null;
       const scaleX = canvas.width / canvas.clientWidth;
       const scaleY = canvas.height / canvas.clientHeight;
-      const scaledX = Math.floor(x * scaleX);
-      const scaledY = Math.floor(y * scaleY);
+      const scaledX = Math.floor(contentX * scaleX);
+      const scaledY = Math.floor(contentY * scaleY);
 
       const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
 
@@ -220,6 +246,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
    */
   function getColorFromVideo(video, x, y) {
     try {
+      if (video.videoWidth === 0) return null;
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
@@ -228,10 +255,19 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      const rect = video.getBoundingClientRect();
+      const cs = window.getComputedStyle(video);
+      const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+      const borderTop = parseFloat(cs.borderTopWidth) || 0;
+      const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+      const paddingTop = parseFloat(cs.paddingTop) || 0;
+      const contentX = x - borderLeft - paddingLeft;
+      const contentY = y - borderTop - paddingTop;
+      if (video.clientWidth === 0 || video.clientHeight === 0) return null;
       const scaleX = canvas.width / video.clientWidth;
       const scaleY = canvas.height / video.clientHeight;
-      const scaledX = Math.floor(x * scaleX);
-      const scaledY = Math.floor(y * scaleY);
+      const scaledX = Math.floor(contentX * scaleX);
+      const scaledY = Math.floor(contentY * scaleY);
 
       const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
 
@@ -339,7 +375,6 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     let currentTextColor = null;
     let currentPixelColor = null; // For image/canvas/video
     let currentSource = 'element'; // 'element', 'image', 'canvas', 'video'
-    let selectedColorType = 'bg'; // 'bg', 'text', or 'pixel'
 
     // Create display panel
     const panel = createElement('div', {
@@ -934,17 +969,17 @@ color: ${rgbToHex(style.color)};`
 
       widthLabel.style.display = 'block';
       widthLabel.textContent = width + 'px';
-      widthLabel.style.left = (left + width / 2 - 20) + 'px';
-      widthLabel.style.top = (top - 24) + 'px';
+      widthLabel.style.left = Math.max(2, left + width / 2 - 20) + 'px';
+      widthLabel.style.top = (top - 24 < 0 ? top + 4 : top - 24) + 'px';
 
       heightLabel.style.display = 'block';
       heightLabel.textContent = height + 'px';
-      heightLabel.style.left = (left - 50) + 'px';
+      heightLabel.style.left = Math.max(2, left - 50) + 'px';
       heightLabel.style.top = (top + height / 2 - 10) + 'px';
 
       diagonalLabel.style.display = 'block';
       diagonalLabel.textContent = diagonal + 'px';
-      diagonalLabel.style.left = (left + width / 2 - 20) + 'px';
+      diagonalLabel.style.left = Math.max(2, left + width / 2 - 20) + 'px';
       diagonalLabel.style.top = (top + height / 2 - 10) + 'px';
 
       const mHeader = createElement('div', { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' });
@@ -1045,6 +1080,8 @@ color: ${rgbToHex(style.color)};`
       overlay.removeEventListener('mousedown', onMouseDown);
       overlay.removeEventListener('mousemove', onMouseMove);
       overlay.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.documentElement.removeEventListener('mouseleave', onMouseLeave);
       document.removeEventListener('keydown', onKeyDown, true);
 
       document.body.style.cursor = originalCursor;
@@ -1062,6 +1099,12 @@ color: ${rgbToHex(style.color)};`
     overlay.addEventListener('mousedown', onMouseDown);
     overlay.addEventListener('mousemove', onMouseMove);
     overlay.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mouseup', onMouseUp);
+    function onMouseLeave(e) {
+      if (!isActive || !isDrawing) return;
+      onMouseUp(e);
+    }
+    document.documentElement.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('keydown', onKeyDown, true);
   }
 
@@ -1075,22 +1118,22 @@ color: ${rgbToHex(style.color)};`
     switch (message.action) {
       case 'ping':
         sendResponse({ pong: true });
-        return true;
+        return false;
 
       case 'activateColorPicker':
         activateColorPicker();
         sendResponse({ success: true });
-        return true;
+        return false;
 
       case 'activateFontDetector':
         activateFontDetector();
         sendResponse({ success: true });
-        return true;
+        return false;
 
       case 'activateMeasureTool':
         activateMeasureTool();
         sendResponse({ success: true });
-        return true;
+        return false;
 
       default:
         return false;

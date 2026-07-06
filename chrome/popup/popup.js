@@ -16,6 +16,7 @@ let removeColorTarget = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[WDR] Popup loaded');
+  document.querySelector('.version').textContent = 'v' + chrome.runtime.getManifest().version;
 
   initializeTabs();
   initializeToolButtons();
@@ -178,9 +179,9 @@ function displayFontDetails(fontDetails) {
   fontResult.classList.remove('hidden');
 
   // Set preview
-  fontPreview.style.fontFamily = fontDetails.fontFamily;
+  fontPreview.style.fontFamily = fontDetails.fontFamilyStack || fontDetails.fontFamily;
   fontPreview.style.fontSize = fontDetails.fontSize;
-  fontPreview.style.fontWeight = fontDetails.fontWeight.split(' ')[0];
+  fontPreview.style.fontWeight = String(fontDetails.fontWeight).split(' ')[0];
   fontPreview.style.fontStyle = fontDetails.fontStyle;
   fontPreview.style.color = fontDetails.color;
   fontPreview.textContent = 'The quick brown fox jumps over the lazy dog';

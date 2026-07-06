@@ -222,10 +222,11 @@ async function ensureContentScript(tabId) {
  * @param {string} actionType - Action to send to content script
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function activateTool(actionType) {
+async function activateTool(actionType, tab = null) {
   try {
-    // Get active tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    }
 
     if (!tab) {
       return { success: false, error: 'No active tab found' };
@@ -277,7 +278,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   const menuItem = MENU_ITEMS.find(item => item.id === info.menuItemId);
   if (menuItem) {
     console.log('[WDR] Context menu clicked:', menuItem.id);
-    activateTool(menuItem.action);
+    activateTool(menuItem.action, tab);
   }
 });
 
