@@ -8,6 +8,7 @@
 // Global state
 let currentPaletteName = null;
 let palettes = {};
+let removeColorTarget = null;
 
 // ============================================================================
 // INITIALIZATION
@@ -264,17 +265,38 @@ function initializePalettes() {
   loadPalettes(updatePaletteDisplay);
 
   document.getElementById('create-palette').addEventListener('click', () => {
-    const name = prompt('Enter palette name:');
-    if (name && name.trim()) {
-      createPalette(name.trim(), [], (success, reason) => {
-        if (success) {
-          currentPaletteName = name.trim();
-          loadPalettes(updatePaletteDisplay);
-          showNotification('Palette created!', 'success');
-        } else if (reason === 'exists') {
-          showNotification(`A palette named "${name.trim()}" already exists`, 'error');
-        }
-      });
+    const createRow = document.getElementById('create-palette-row');
+    const createInput = document.getElementById('create-palette-name');
+    createRow.classList.remove('hidden');
+    createInput.value = '';
+    createInput.focus();
+  });
+
+  document.getElementById('create-palette-confirm').addEventListener('click', () => {
+    const createInput = document.getElementById('create-palette-name');
+    const name = createInput.value.trim();
+    if (!name) return;
+    createPalette(name, [], (success, reason) => {
+      if (success) {
+        currentPaletteName = name;
+        loadPalettes(updatePaletteDisplay);
+        showNotification('Palette created!', 'success');
+        document.getElementById('create-palette-row').classList.add('hidden');
+      } else if (reason === 'exists') {
+        showNotification(`A palette named "${name}" already exists`, 'error');
+      }
+    });
+  });
+
+  document.getElementById('create-palette-cancel').addEventListener('click', () => {
+    document.getElementById('create-palette-row').classList.add('hidden');
+  });
+
+  document.getElementById('create-palette-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('create-palette-confirm').click();
+    } else if (e.key === 'Escape') {
+      document.getElementById('create-palette-row').classList.add('hidden');
     }
   });
 
@@ -329,6 +351,37 @@ function initializePalettes() {
       reader.readAsText(file);
     }
   });
+
+  const colorChip = document.getElementById('remove-color-chip');
+  document.getElementById('remove-color-confirm').addEventListener('click', () => {
+    if (removeColorTarget) {
+      removeFromPalette(removeColorTarget.paletteName, removeColorTarget.color, () => {
+        loadPalettes(updatePaletteDisplay);
+        showNotification('Color removed', 'success');
+      });
+      removeColorTarget = null;
+    }
+    colorChip.classList.add('hidden');
+  });
+
+  document.getElementById('remove-color-cancel').addEventListener('click', () => {
+    removeColorTarget = null;
+    colorChip.classList.add('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!colorChip.classList.contains('hidden') && !colorChip.contains(e.target)) {
+      removeColorTarget = null;
+      colorChip.classList.add('hidden');
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !colorChip.classList.contains('hidden')) {
+      removeColorTarget = null;
+      colorChip.classList.add('hidden');
+    }
+  }, true);
 }
 
 function updatePaletteDisplay(loadedPalettes) {
@@ -367,30 +420,49 @@ function displayPalette(paletteName) {
     swatch.addEventListener('click', () => displayPickedColor(color));
     swatch.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      if (confirm(`Remove ${color} from palette?`)) {
-        removeFromPalette(paletteName, color, () => {
-          loadPalettes(updatePaletteDisplay);
-          showNotification('Color removed', 'success');
-        });
-      }
+      removeColorTarget = { paletteName, color };
+      document.getElementById('remove-color-text').textContent = `Remove ${color}?`;
+      document.getElementById('remove-color-chip').classList.remove('hidden');
     });
     colorsEl.appendChild(swatch);
   });
 
   // Setup palette actions
+  const nameInput = document.getElementById('rename-palette-input');
+
   document.getElementById('edit-palette-name').onclick = () => {
-    const newName = prompt('Enter new palette name:', paletteName);
-    if (newName && newName.trim() && newName !== paletteName) {
-      renamePalette(paletteName, newName.trim(), (success) => {
-        if (success) {
-          currentPaletteName = newName.trim();
-          loadPalettes(updatePaletteDisplay);
-          showNotification('Palette renamed!', 'success');
-        } else {
-          showNotification('Could not rename palette', 'error');
-        }
-      });
+    nameInput.value = paletteName;
+    nameEl.classList.add('hidden');
+    nameInput.classList.remove('hidden');
+    nameInput.focus();
+    nameInput.select();
+  };
+
+  nameInput.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      const newName = nameInput.value.trim();
+      nameEl.classList.remove('hidden');
+      nameInput.classList.add('hidden');
+      if (newName && newName !== paletteName) {
+        renamePalette(paletteName, newName, (success) => {
+          if (success) {
+            currentPaletteName = newName;
+            loadPalettes(updatePaletteDisplay);
+            showNotification('Palette renamed!', 'success');
+          } else {
+            showNotification('Could not rename palette', 'error');
+          }
+        });
+      }
+    } else if (e.key === 'Escape') {
+      nameEl.classList.remove('hidden');
+      nameInput.classList.add('hidden');
     }
+  };
+
+  nameInput.onblur = () => {
+    nameEl.classList.remove('hidden');
+    nameInput.classList.add('hidden');
   };
 
   document.getElementById('export-palette').onclick = () => {
@@ -405,14 +477,27 @@ function displayPalette(paletteName) {
     showNotification('Palette exported!', 'success');
   };
 
-  document.getElementById('delete-palette').onclick = () => {
-    if (confirm(`Delete palette "${paletteName}"?`)) {
+  const deleteBtn = document.getElementById('delete-palette');
+  let deleteTimer = null;
+
+  deleteBtn.onclick = () => {
+    if (deleteBtn.classList.contains('confirming')) {
+      clearTimeout(deleteTimer);
+      deleteBtn.classList.remove('confirming');
+      deleteBtn.textContent = 'Delete';
       deletePalette(paletteName, () => {
         currentPaletteName = null;
         loadPalettes(updatePaletteDisplay);
         document.getElementById('current-palette').classList.add('hidden');
         showNotification('Palette deleted', 'success');
       });
+    } else {
+      deleteBtn.classList.add('confirming');
+      deleteBtn.textContent = 'Confirm delete?';
+      deleteTimer = setTimeout(() => {
+        deleteBtn.classList.remove('confirming');
+        deleteBtn.textContent = 'Delete';
+      }, 3000);
     }
   };
 }

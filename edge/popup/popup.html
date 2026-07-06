@@ -120,6 +120,11 @@
     <section class="tab-pane" id="palettes-tab" role="tabpanel">
       <div class="palette-tools">
         <button class="primary-btn" id="create-palette">+ New Palette</button>
+        <div class="inline-input-row hidden" id="create-palette-row">
+          <input type="text" id="create-palette-name" maxlength="40" placeholder="Palette name" aria-label="New palette name">
+          <button class="secondary-btn" id="create-palette-confirm">Create</button>
+          <button class="secondary-btn" id="create-palette-cancel">Cancel</button>
+        </div>
         <select id="palette-selector" aria-label="Select palette">
           <option value="">Select a palette...</option>
         </select>
@@ -128,7 +133,8 @@
       <div class="current-palette hidden" id="current-palette">
         <div class="palette-header">
           <h3 id="palette-name"></h3>
-          <button class="icon-btn" id="edit-palette-name" title="Rename palette">&#x270F;</button>
+          <input type="text" id="rename-palette-input" maxlength="40" class="hidden" aria-label="Rename palette">
+          <button class="icon-btn" id="edit-palette-name" title="Rename palette" aria-label="Rename palette">&#x270F;</button>
         </div>
         <div class="color-grid" id="palette-colors"></div>
         <div class="palette-actions">
@@ -140,6 +146,12 @@
       <div class="import-section">
         <input type="file" id="import-palette" accept=".json" hidden>
         <button class="secondary-btn full-width" id="import-btn">Import Palette</button>
+      </div>
+
+      <div class="confirm-chip hidden" id="remove-color-chip" role="alert">
+        <span id="remove-color-text"></span>
+        <button class="danger-btn" id="remove-color-confirm">Remove</button>
+        <button class="secondary-btn" id="remove-color-cancel">Cancel</button>
       </div>
     </section>
   </main>
