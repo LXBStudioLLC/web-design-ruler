@@ -240,7 +240,13 @@ function displayFontDetails(fontDetails) {
 
   properties.forEach(prop => {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="property-name">${prop.name}:</span><span>${prop.value}</span>`;
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'property-name';
+    nameSpan.textContent = prop.name + ':';
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = prop.value;
+    li.appendChild(nameSpan);
+    li.appendChild(valueSpan);
     fontProperties.appendChild(li);
   });
 

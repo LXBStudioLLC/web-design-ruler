@@ -260,7 +260,9 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       gap: '12px',
       pointerEvents: 'none'
     });
-    panel.innerHTML = '<span>Hover over any element. Click to pick background, or click swatches below. ESC to cancel.</span>';
+    const initSpan = createElement('span', {});
+    initSpan.textContent = 'Hover over any element. Click to pick background, or click swatches below. ESC to cancel.';
+    panel.replaceChildren(initSpan);
     document.body.appendChild(panel);
 
     function onMouseMove(e) {
@@ -302,35 +304,45 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
                            currentSource === 'canvas' ? 'canvas' :
                            currentSource === 'video' ? 'video' : '';
         panel.style.pointerEvents = 'auto';
-        panel.innerHTML = `
-          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-color-type="pixel" title="Click to select pixel color">
-            <span style="display:inline-block;width:28px;height:28px;background-color:${currentPixelColor};border:2px solid white;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,0.2);"></span>
-            <div>
-              <div style="font-family:monospace;font-size:14px;font-weight:600;">${currentPixelColor}</div>
-              <div style="font-size:10px;color:#9CA3AF;">${sourceLabel} pixel</div>
-            </div>
-          </div>
-        `;
+        const pixelContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' });
+        pixelContainer.dataset.colorType = 'pixel';
+        pixelContainer.title = 'Click to select pixel color';
+        const pixelSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', backgroundColor: currentPixelColor, border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
+        const pixelInfo = createElement('div', {});
+        const pixelHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+        pixelHex.textContent = currentPixelColor;
+        const pixelLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
+        pixelLabel.textContent = sourceLabel + ' pixel';
+        pixelInfo.replaceChildren(pixelHex, pixelLabel);
+        pixelContainer.replaceChildren(pixelSwatch, pixelInfo);
+        panel.replaceChildren(pixelContainer);
       } else {
         // For regular elements, show both background and text colors
         panel.style.pointerEvents = 'auto';
-        panel.innerHTML = `
-          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;" data-color-type="bg" title="Click to select background color">
-            <span style="display:inline-block;width:28px;height:28px;background-color:${currentBgColor};border:2px solid white;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,0.2);"></span>
-            <div>
-              <div style="font-family:monospace;font-size:14px;font-weight:600;">${currentBgColor}</div>
-              <div style="font-size:10px;color:#9CA3AF;">background</div>
-            </div>
-          </div>
-          <div style="width:1px;height:36px;background:rgba(255,255,255,0.3);"></div>
-          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;" data-color-type="text" title="Click to select text color">
-            <span style="display:inline-block;width:28px;height:28px;background-color:${currentTextColor};border:2px solid white;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,0.2);"></span>
-            <div>
-              <div style="font-family:monospace;font-size:14px;font-weight:600;">${currentTextColor}</div>
-              <div style="font-size:10px;color:#9CA3AF;">text</div>
-            </div>
-          </div>
-        `;
+        const bgContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s' });
+        bgContainer.dataset.colorType = 'bg';
+        bgContainer.title = 'Click to select background color';
+        const bgSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', backgroundColor: currentBgColor, border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
+        const bgInfo = createElement('div', {});
+        const bgHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+        bgHex.textContent = currentBgColor;
+        const bgLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
+        bgLabel.textContent = 'background';
+        bgInfo.replaceChildren(bgHex, bgLabel);
+        bgContainer.replaceChildren(bgSwatch, bgInfo);
+        const divider = createElement('div', { width: '1px', height: '36px', background: 'rgba(255,255,255,0.3)' });
+        const textContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s' });
+        textContainer.dataset.colorType = 'text';
+        textContainer.title = 'Click to select text color';
+        const textSwatch = createElement('span', { display: 'inline-block', width: '28px', height: '28px', backgroundColor: currentTextColor, border: '2px solid white', borderRadius: '4px', boxShadow: '0 0 0 1px rgba(0,0,0,0.2)' });
+        const textInfo = createElement('div', {});
+        const textHex = createElement('div', { fontFamily: 'monospace', fontSize: '14px', fontWeight: '600' });
+        textHex.textContent = currentTextColor;
+        const textLabel = createElement('div', { fontSize: '10px', color: '#9CA3AF' });
+        textLabel.textContent = 'text';
+        textInfo.replaceChildren(textHex, textLabel);
+        textContainer.replaceChildren(textSwatch, textInfo);
+        panel.replaceChildren(bgContainer, divider, textContainer);
       }
     }
 
@@ -340,10 +352,11 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       safeSend({ action: 'colorPicked', color: selectedColor });
 
       // Show confirmation
-      panel.innerHTML = `
-        <span style="color:${COLORS.success};font-size:20px;">&#10003;</span>
-        <span>Copied ${colorLabel}: ${selectedColor}</span>
-      `;
+      const confirmCheck = createElement('span', { color: COLORS.success, fontSize: '20px' });
+      confirmCheck.textContent = '\u2713';
+      const confirmText = createElement('span', {});
+      confirmText.textContent = 'Copied ' + colorLabel + ': ' + selectedColor;
+      panel.replaceChildren(confirmCheck, confirmText);
 
       copyToClipboard(selectedColor);
       setTimeout(cleanup, 1000);
@@ -451,13 +464,15 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       width: '320px',
       maxWidth: '90vw'
     });
-    panel.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <span style="font-size:18px;">Aa</span>
-        <span style="font-weight:600;">Font Detector</span>
-      </div>
-      <div style="color:#9CA3AF;">Hover over text to see font details. Click to select.</div>
-    `;
+    const fontHeader = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' });
+    const fontIcon = createElement('span', { fontSize: '18px' });
+    fontIcon.textContent = 'Aa';
+    const fontTitle = createElement('span', { fontWeight: '600' });
+    fontTitle.textContent = 'Font Detector';
+    fontHeader.replaceChildren(fontIcon, fontTitle);
+    const fontInstruction = createElement('div', { color: '#9CA3AF' });
+    fontInstruction.textContent = 'Hover over text to see font details. Click to select.';
+    panel.replaceChildren(fontHeader, fontInstruction);
     document.body.appendChild(panel);
 
     function createHighlight(element) {
@@ -564,27 +579,55 @@ color: ${rgbToHex(style.color)};`
       const details = getFontDetails(element);
       const familyDisplay = details.fontFamily;
 
-      panel.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">Aa</span>
-          <span style="font-weight:600;">Font Detector</span>
-        </div>
-        <div style="padding:10px;background:rgba(255,255,255,0.1);border-radius:4px;margin-bottom:12px;">
-          <div style="font-family:${details.fontFamilyStack};font-size:18px;font-weight:600;">${familyDisplay}</div>
-        </div>
-        <div style="display:grid;grid-template-columns:90px 1fr;gap:6px;font-size:12px;">
-          <span style="color:#9CA3AF;">Size:</span><span>${details.fontSize}</span>
-          <span style="color:#9CA3AF;">Weight:</span><span>${details.fontWeight}</span>
-          <span style="color:#9CA3AF;">Style:</span><span>${details.fontStyle}</span>
-          <span style="color:#9CA3AF;">Color:</span>
-          <span style="display:flex;align-items:center;gap:6px;">
-            ${details.color}
-            <span style="width:14px;height:14px;background:${details.color};border:1px solid rgba(255,255,255,0.3);border-radius:2px;"></span>
-          </span>
-          <span style="color:#9CA3AF;">Line Height:</span><span>${details.lineHeight}</span>
-        </div>
-        <div style="text-align:center;color:#9CA3AF;font-size:11px;margin-top:12px;">Click to select</div>
-      `;
+      const header = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' });
+      const headerIcon = createElement('span', { fontSize: '18px' });
+      headerIcon.textContent = 'Aa';
+      const headerTitle = createElement('span', { fontWeight: '600' });
+      headerTitle.textContent = 'Font Detector';
+      header.replaceChildren(headerIcon, headerTitle);
+
+      const previewWrap = createElement('div', { padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', marginBottom: '12px' });
+      const previewText = createElement('div', { fontSize: '18px', fontWeight: '600' });
+      previewText.style.fontFamily = details.fontFamilyStack;
+      previewText.textContent = familyDisplay;
+      previewWrap.replaceChildren(previewText);
+
+      const grid = createElement('div', { display: 'grid', gridTemplateColumns: '90px 1fr', gap: '6px', fontSize: '12px' });
+
+      const sizeLabel = createElement('span', { color: '#9CA3AF' });
+      sizeLabel.textContent = 'Size:';
+      const sizeValue = createElement('span', {});
+      sizeValue.textContent = details.fontSize;
+
+      const weightLabel = createElement('span', { color: '#9CA3AF' });
+      weightLabel.textContent = 'Weight:';
+      const weightValue = createElement('span', {});
+      weightValue.textContent = details.fontWeight;
+
+      const styleLabel = createElement('span', { color: '#9CA3AF' });
+      styleLabel.textContent = 'Style:';
+      const styleValue = createElement('span', {});
+      styleValue.textContent = details.fontStyle;
+
+      const colorLabel = createElement('span', { color: '#9CA3AF' });
+      colorLabel.textContent = 'Color:';
+      const colorValue = createElement('span', { display: 'flex', alignItems: 'center', gap: '6px' });
+      const colorText = createElement('span', {});
+      colorText.textContent = details.color;
+      const colorSwatch = createElement('span', { width: '14px', height: '14px', background: details.color, border: '1px solid rgba(255,255,255,0.3)', borderRadius: '2px' });
+      colorValue.replaceChildren(colorText, colorSwatch);
+
+      const lineHeightLabel = createElement('span', { color: '#9CA3AF' });
+      lineHeightLabel.textContent = 'Line Height:';
+      const lineHeightValue = createElement('span', {});
+      lineHeightValue.textContent = details.lineHeight;
+
+      grid.replaceChildren(sizeLabel, sizeValue, weightLabel, weightValue, styleLabel, styleValue, colorLabel, colorValue, lineHeightLabel, lineHeightValue);
+
+      const footer = createElement('div', { textAlign: 'center', color: '#9CA3AF', fontSize: '11px', marginTop: '12px' });
+      footer.textContent = 'Click to select';
+
+      panel.replaceChildren(header, previewWrap, grid, footer);
     }
 
     function onMouseMove(e) {
@@ -610,13 +653,15 @@ color: ${rgbToHex(style.color)};`
 
       copyToClipboard(details.css);
 
-      panel.innerHTML = `
-        <div style="text-align:center;padding:20px;">
-          <div style="color:${COLORS.success};font-size:28px;">&#10003;</div>
-          <div style="font-weight:600;margin-top:8px;">Font Selected!</div>
-          <div style="color:#9CA3AF;font-size:12px;margin-top:4px;">CSS copied to clipboard</div>
-        </div>
-      `;
+      const fontConfirmWrap = createElement('div', { textAlign: 'center', padding: '20px' });
+      const fontConfirmCheck = createElement('div', { color: COLORS.success, fontSize: '28px' });
+      fontConfirmCheck.textContent = '\u2713';
+      const fontConfirmTitle = createElement('div', { fontWeight: '600', marginTop: '8px' });
+      fontConfirmTitle.textContent = 'Font Selected!';
+      const fontConfirmSub = createElement('div', { color: '#9CA3AF', fontSize: '12px', marginTop: '4px' });
+      fontConfirmSub.textContent = 'CSS copied to clipboard';
+      fontConfirmWrap.replaceChildren(fontConfirmCheck, fontConfirmTitle, fontConfirmSub);
+      panel.replaceChildren(fontConfirmWrap);
 
       setTimeout(cleanup, 1500);
     }
@@ -724,13 +769,15 @@ color: ${rgbToHex(style.color)};`
       width: '260px',
       textAlign: 'center'
     });
-    panel.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
-        <span style="font-size:18px;">&#x1F4CF;</span>
-        <span style="font-weight:600;">Measurement Tool</span>
-      </div>
-      <div style="color:#9CA3AF;">Click and drag to measure</div>
-    `;
+    const measureHeader = createElement('div', { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' });
+    const measureIcon = createElement('span', { fontSize: '18px' });
+    measureIcon.textContent = '\u{1F4CF}';
+    const measureTitle = createElement('span', { fontWeight: '600' });
+    measureTitle.textContent = 'Measurement Tool';
+    measureHeader.replaceChildren(measureIcon, measureTitle);
+    const measureInstruction = createElement('div', { color: '#9CA3AF' });
+    measureInstruction.textContent = 'Click and drag to measure';
+    panel.replaceChildren(measureHeader, measureInstruction);
     document.body.appendChild(panel);
 
     function updateMeasurement() {
@@ -761,18 +808,42 @@ color: ${rgbToHex(style.color)};`
       diagonalLabel.style.left = (left + width / 2 - 20) + 'px';
       diagonalLabel.style.top = (top + height / 2 - 10) + 'px';
 
-      panel.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">&#x1F4CF;</span>
-          <span style="font-weight:600;">Measurement Tool</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
-          <div><span style="color:#9CA3AF;">W:</span> ${width}px</div>
-          <div><span style="color:#9CA3AF;">H:</span> ${height}px</div>
-          <div><span style="color:#9CA3AF;">D:</span> ${diagonal}px</div>
-        </div>
-        <div style="color:#9CA3AF;font-size:11px;margin-top:10px;">Release to save</div>
-      `;
+      const mHeader = createElement('div', { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' });
+      const mIcon = createElement('span', { fontSize: '18px' });
+      mIcon.textContent = '\u{1F4CF}';
+      const mTitle = createElement('span', { fontWeight: '600' });
+      mTitle.textContent = 'Measurement Tool';
+      mHeader.replaceChildren(mIcon, mTitle);
+
+      const mGrid = createElement('div', { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' });
+
+      const wCell = createElement('div', {});
+      const wLabel = createElement('span', { color: '#9CA3AF' });
+      wLabel.textContent = 'W:';
+      const wValue = createElement('span', {});
+      wValue.textContent = ' ' + width + 'px';
+      wCell.replaceChildren(wLabel, wValue);
+
+      const hCell = createElement('div', {});
+      const hLabel = createElement('span', { color: '#9CA3AF' });
+      hLabel.textContent = 'H:';
+      const hValue = createElement('span', {});
+      hValue.textContent = ' ' + height + 'px';
+      hCell.replaceChildren(hLabel, hValue);
+
+      const dCell = createElement('div', {});
+      const dLabel = createElement('span', { color: '#9CA3AF' });
+      dLabel.textContent = 'D:';
+      const dValue = createElement('span', {});
+      dValue.textContent = ' ' + diagonal + 'px';
+      dCell.replaceChildren(dLabel, dValue);
+
+      mGrid.replaceChildren(wCell, hCell, dCell);
+
+      const mFooter = createElement('div', { color: '#9CA3AF', fontSize: '11px', marginTop: '10px' });
+      mFooter.textContent = 'Release to save';
+
+      panel.replaceChildren(mHeader, mGrid, mFooter);
     }
 
     function onMouseDown(e) {
@@ -806,13 +877,15 @@ color: ${rgbToHex(style.color)};`
 
       safeSend({ action: 'measurementTaken', measurements });
 
-      panel.innerHTML = `
-        <div style="text-align:center;padding:15px;">
-          <div style="color:${COLORS.success};font-size:28px;">&#10003;</div>
-          <div style="font-weight:600;margin-top:8px;">Saved!</div>
-          <div style="font-size:14px;margin-top:8px;">${measurements.width} x ${measurements.height} px</div>
-        </div>
-      `;
+      const savedWrap = createElement('div', { textAlign: 'center', padding: '15px' });
+      const savedCheck = createElement('div', { color: COLORS.success, fontSize: '28px' });
+      savedCheck.textContent = '\u2713';
+      const savedTitle = createElement('div', { fontWeight: '600', marginTop: '8px' });
+      savedTitle.textContent = 'Saved!';
+      const savedMeasurements = createElement('div', { fontSize: '14px', marginTop: '8px' });
+      savedMeasurements.textContent = measurements.width + ' x ' + measurements.height + ' px';
+      savedWrap.replaceChildren(savedCheck, savedTitle, savedMeasurements);
+      panel.replaceChildren(savedWrap);
 
       setTimeout(cleanup, 1500);
     }
