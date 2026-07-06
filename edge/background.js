@@ -350,6 +350,7 @@ async function activateTool(actionType, tab = null) {
         }
 
         log('[WDR-Edge] Tool activated:', actionType);
+        if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
         setBadge('\u25CF');
         resolve({ success: true });
       });
@@ -389,7 +390,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;  // Keep channel open
   }
 
-  // Data from content script
+  // Tool cancelled (Esc) in the content script: clear the activity badge
+  if (message.action === 'toolCancelled') {
+    if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
+    setBadge('');
+    sendResponse({ success: true });
+    return false;
+  }
+
+  // Data from content script.
+  // Forward to the popup only AFTER storage is written, so the popup's
+  // re-read never races the write.
   if (message.action === 'colorPicked' && message.color) {
     chrome.storage.local.set({ lastPickedColor: message.color }, () => {
       if (chrome.runtime.lastError) {
@@ -406,11 +417,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       recentColors = recentColors.filter(c => c !== message.color);
       recentColors.unshift(message.color);
       recentColors = recentColors.slice(0, 20);
-      chrome.storage.local.set({ recentColors });
+      chrome.storage.local.set({ recentColors }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[WDR-Edge] Storage error:', chrome.runtime.lastError.message);
+        }
+        chrome.runtime.sendMessage(message).catch(() => {});
+      });
     });
 
-    // Forward to popup if open
-    chrome.runtime.sendMessage(message).catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return true;
@@ -421,8 +435,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (chrome.runtime.lastError) {
         console.error('[WDR-Edge] Storage error:', chrome.runtime.lastError.message);
       }
+      chrome.runtime.sendMessage(message).catch(() => {});
     });
-    chrome.runtime.sendMessage(message).catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return true;
@@ -433,8 +447,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (chrome.runtime.lastError) {
         console.error('[WDR-Edge] Storage error:', chrome.runtime.lastError.message);
       }
+      chrome.runtime.sendMessage(message).catch(() => {});
     });
-    chrome.runtime.sendMessage(message).catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return true;

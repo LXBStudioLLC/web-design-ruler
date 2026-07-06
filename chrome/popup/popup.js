@@ -297,14 +297,9 @@ function displayFontDetails(fontDetails) {
   };
 
   document.getElementById('save-font').onclick = () => {
-    let isWebFont = false;
-    try {
-      if (document.fonts && typeof document.fonts.check === 'function') {
-        isWebFont = document.fonts.check(fontDetails.fontSize + ' ' + fontDetails.fontFamilyStack);
-      }
-    } catch (e) {
-      isWebFont = false;
-    }
+    // isWebFont is detected in the content script against the inspected
+    // page's FontFaceSet; the popup's own FontFaceSet is meaningless here.
+    const isWebFont = fontDetails.isWebFont === true;
     chrome.storage.local.get('savedFonts', ({ savedFonts = [] }) => {
       savedFonts.unshift({ ...fontDetails, isWebFont, savedAt: new Date().toISOString() });
       savedFonts = savedFonts.slice(0, 50);
@@ -558,6 +553,8 @@ function initializePalettes() {
         }
       };
       reader.readAsText(file);
+      // Reset so selecting the same file again re-fires the change event
+      e.target.value = '';
     }
   });
 
@@ -791,6 +788,11 @@ function initializeCopyButtons() {
 
 function listenForMessages() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Content scripts broadcast reach the popup directly (sender.tab set)
+    // AND via the background's re-forward (no sender.tab). Handle only the
+    // forwarded copy — it arrives after storage is written.
+    if (sender && sender.tab) return;
+
     log('[WDR] Popup received:', message);
 
     if (message.action === 'colorPicked' && message.color) {

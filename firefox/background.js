@@ -249,6 +249,7 @@ async function activateTool(actionType, tab = null) {
     try {
       await browserAPI.tabs.sendMessage(tab.id, { action: actionType });
       log('[WDR-Firefox] Tool activated:', actionType);
+      if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
       setBadge('\u25CF');
       return { success: true };
     } catch (error) {
@@ -293,7 +294,17 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates async response
   }
 
-  // Handle data from content script
+  // Tool cancelled (Esc) in the content script: clear the activity badge
+  if (message.action === 'toolCancelled') {
+    if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
+    setBadge('');
+    sendResponse({ success: true });
+    return false;
+  }
+
+  // Handle data from content script.
+  // Forward to the popup only AFTER storage is written, so the popup's
+  // re-read never races the write.
   if (message.action === 'colorPicked' && message.color) {
     browserAPI.storage.local.set({ lastPickedColor: message.color });
 
@@ -301,26 +312,29 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       recentColors = recentColors.filter(c => c !== message.color);
       recentColors.unshift(message.color);
       recentColors = recentColors.slice(0, 20);
-      browserAPI.storage.local.set({ recentColors });
-    });
+      return browserAPI.storage.local.set({ recentColors });
+    }).then(() => {
+      return browserAPI.runtime.sendMessage(message);
+    }).catch(() => {});
 
-    browserAPI.runtime.sendMessage(message).catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return false;
   }
 
   if (message.action === 'fontDetected' && message.fontDetails) {
-    browserAPI.storage.local.set({ lastDetectedFont: message.fontDetails });
-    browserAPI.runtime.sendMessage(message).catch(() => {});
+    browserAPI.storage.local.set({ lastDetectedFont: message.fontDetails }).then(() => {
+      return browserAPI.runtime.sendMessage(message);
+    }).catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return false;
   }
 
   if (message.action === 'measurementTaken' && message.measurements) {
-    browserAPI.storage.local.set({ lastMeasurement: message.measurements });
-    browserAPI.runtime.sendMessage(message).catch(() => {});
+    browserAPI.storage.local.set({ lastMeasurement: message.measurements }).then(() => {
+      return browserAPI.runtime.sendMessage(message);
+    }).catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return false;

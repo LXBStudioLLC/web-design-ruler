@@ -284,6 +284,7 @@ async function activateTool(actionType, tab = null) {
         }
 
         log('[WDR] Tool activated:', actionType);
+        if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
         setBadge('\u25CF');
         resolve({ success: true });
       });
@@ -320,37 +321,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
 
-  // Handle data from content script
+  // Tool cancelled (Esc) in the content script: clear the activity badge
+  if (message.action === 'toolCancelled') {
+    if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
+    setBadge('');
+    sendResponse({ success: true });
+    return false;
+  }
+
+  // Handle data from content script.
+  // Forward to the popup only AFTER storage is written, so the popup's
+  // re-read never races the write.
   if (message.action === 'colorPicked' && message.color) {
-    // Save to storage
     chrome.storage.local.set({ lastPickedColor: message.color });
 
-    // Update recent colors
     chrome.storage.local.get('recentColors', ({ recentColors = [] }) => {
       recentColors = recentColors.filter(c => c !== message.color);
       recentColors.unshift(message.color);
       recentColors = recentColors.slice(0, 20);
-      chrome.storage.local.set({ recentColors });
+      chrome.storage.local.set({ recentColors }, () => {
+        chrome.runtime.sendMessage(message).catch(() => {});
+      });
     });
 
-    // Forward to popup if open
-    chrome.runtime.sendMessage(message).catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return true;
   }
 
   if (message.action === 'fontDetected' && message.fontDetails) {
-    chrome.storage.local.set({ lastDetectedFont: message.fontDetails });
-    chrome.runtime.sendMessage(message).catch(() => {});
+    chrome.storage.local.set({ lastDetectedFont: message.fontDetails }, () => {
+      chrome.runtime.sendMessage(message).catch(() => {});
+    });
     flashDoneBadge();
     sendResponse({ success: true });
     return true;
   }
 
   if (message.action === 'measurementTaken' && message.measurements) {
-    chrome.storage.local.set({ lastMeasurement: message.measurements });
-    chrome.runtime.sendMessage(message).catch(() => {});
+    chrome.storage.local.set({ lastMeasurement: message.measurements }, () => {
+      chrome.runtime.sendMessage(message).catch(() => {});
+    });
     flashDoneBadge();
     sendResponse({ success: true });
     return true;

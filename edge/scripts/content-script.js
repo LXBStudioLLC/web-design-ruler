@@ -161,130 +161,6 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   function extAlive() { try { return !!(chrome.runtime && chrome.runtime.id); } catch { return false; } }
   function safeSend(msg) { if (!extAlive()) return; try { chrome.runtime.sendMessage(msg, () => void chrome.runtime.lastError); } catch (e) { console.warn('[WDR] sendMessage failed:', e.message); } }
 
-  /**
-   * Get color from image at specific coordinates using canvas
-   * @param {HTMLImageElement} img - Image element
-   * @param {number} x - X coordinate relative to image
-   * @param {number} y - Y coordinate relative to image
-   * @returns {string|null} - HEX color or null if failed
-   */
-  function getColorFromImage(img, x, y) {
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
-
-      ctx.drawImage(img, 0, 0);
-
-      const rect = img.getBoundingClientRect();
-      const cs = window.getComputedStyle(img);
-      const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
-      const borderTop = parseFloat(cs.borderTopWidth) || 0;
-      const paddingLeft = parseFloat(cs.paddingLeft) || 0;
-      const paddingTop = parseFloat(cs.paddingTop) || 0;
-      const contentX = x - borderLeft - paddingLeft;
-      const contentY = y - borderTop - paddingTop;
-      if (img.clientWidth === 0 || img.clientHeight === 0) return null;
-      const scaleX = canvas.width / img.clientWidth;
-      const scaleY = canvas.height / img.clientHeight;
-      const scaledX = Math.floor(contentX * scaleX);
-      const scaledY = Math.floor(contentY * scaleY);
-
-      const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
-
-      return '#' + [pixel[0], pixel[1], pixel[2]].map(v => {
-        const hex = v.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('').toUpperCase();
-    } catch (error) {
-      // Cross-origin images will throw SecurityError
-      console.warn('[WDR] Cannot read image pixels (likely cross-origin):', error.message);
-      return null;
-    }
-  }
-
-  /**
-   * Get color from canvas element at specific coordinates
-   * @param {HTMLCanvasElement} canvas - Canvas element
-   * @param {number} x - X coordinate relative to canvas
-   * @param {number} y - Y coordinate relative to canvas
-   * @returns {string|null} - HEX color or null if failed
-   */
-  function getColorFromCanvas(canvas, x, y) {
-    try {
-      const ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      const cs = window.getComputedStyle(canvas);
-      const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
-      const borderTop = parseFloat(cs.borderTopWidth) || 0;
-      const paddingLeft = parseFloat(cs.paddingLeft) || 0;
-      const paddingTop = parseFloat(cs.paddingTop) || 0;
-      const contentX = x - borderLeft - paddingLeft;
-      const contentY = y - borderTop - paddingTop;
-      if (canvas.clientWidth === 0 || canvas.clientHeight === 0) return null;
-      const scaleX = canvas.width / canvas.clientWidth;
-      const scaleY = canvas.height / canvas.clientHeight;
-      const scaledX = Math.floor(contentX * scaleX);
-      const scaledY = Math.floor(contentY * scaleY);
-
-      const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
-
-      return '#' + [pixel[0], pixel[1], pixel[2]].map(v => {
-        const hex = v.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('').toUpperCase();
-    } catch (error) {
-      console.warn('[WDR] Cannot read canvas pixels:', error.message);
-      return null;
-    }
-  }
-
-  /**
-   * Get color from video element at specific coordinates
-   * @param {HTMLVideoElement} video - Video element
-   * @param {number} x - X coordinate relative to video
-   * @param {number} y - Y coordinate relative to video
-   * @returns {string|null} - HEX color or null if failed
-   */
-  function getColorFromVideo(video, x, y) {
-    try {
-      if (video.videoWidth === 0) return null;
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      canvas.width = video.videoWidth || video.clientWidth;
-      canvas.height = video.videoHeight || video.clientHeight;
-
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const rect = video.getBoundingClientRect();
-      const cs = window.getComputedStyle(video);
-      const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
-      const borderTop = parseFloat(cs.borderTopWidth) || 0;
-      const paddingLeft = parseFloat(cs.paddingLeft) || 0;
-      const paddingTop = parseFloat(cs.paddingTop) || 0;
-      const contentX = x - borderLeft - paddingLeft;
-      const contentY = y - borderTop - paddingTop;
-      if (video.clientWidth === 0 || video.clientHeight === 0) return null;
-      const scaleX = canvas.width / video.clientWidth;
-      const scaleY = canvas.height / video.clientHeight;
-      const scaledX = Math.floor(contentX * scaleX);
-      const scaledY = Math.floor(contentY * scaleY);
-
-      const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
-
-      return '#' + [pixel[0], pixel[1], pixel[2]].map(v => {
-        const hex = v.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('').toUpperCase();
-    } catch (error) {
-      console.warn('[WDR] Cannot read video pixels:', error.message);
-      return null;
-    }
-  }
-
   // ============================================================================
   // COLOR PICKER TOOL
   // ============================================================================
@@ -382,6 +258,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     let rafId = null;
     let lastMoveEvent = null;
     let pickerCanvas = null;
+    let pickerCanvasEl = null;
     let pickerCanvasKey = null;
 
     // Create display panel
@@ -450,27 +327,26 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function sampleMediaPixel(element, relX, relY) {
       try {
-        const key = element.tagName + '_' + element.clientWidth + 'x' + element.clientHeight;
-        if (pickerCanvasKey !== key) {
+        const backingW = element.tagName === 'IMG' ? (element.naturalWidth || element.width)
+          : element.tagName === 'CANVAS' ? element.width
+          : (element.videoWidth || element.clientWidth);
+        const backingH = element.tagName === 'IMG' ? (element.naturalHeight || element.height)
+          : element.tagName === 'CANVAS' ? element.height
+          : (element.videoHeight || element.clientHeight);
+        if (!backingW || !backingH) return null;
+        const srcKey = element.tagName === 'IMG' ? (element.currentSrc || element.src || '') : '';
+        const key = element.clientWidth + 'x' + element.clientHeight + '_' + backingW + 'x' + backingH + '_' + srcKey;
+        // Cache is valid only for the SAME element with unchanged dimensions/source;
+        // canvas and video frames change over time, so those are redrawn every sample.
+        if (pickerCanvasEl !== element || pickerCanvasKey !== key) {
           pickerCanvas = document.createElement('canvas');
-          const drawCtx = pickerCanvas.getContext('2d');
-          if (element.tagName === 'IMG') {
-            pickerCanvas.width = element.naturalWidth || element.width;
-            pickerCanvas.height = element.naturalHeight || element.height;
-            drawCtx.drawImage(element, 0, 0);
-          } else if (element.tagName === 'CANVAS') {
-            pickerCanvas.width = element.width;
-            pickerCanvas.height = element.height;
-            drawCtx.drawImage(element, 0, 0);
-          } else if (element.tagName === 'VIDEO') {
-            pickerCanvas.width = element.videoWidth || element.clientWidth;
-            pickerCanvas.height = element.videoHeight || element.clientHeight;
-            drawCtx.drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
-          }
+          pickerCanvas.width = backingW;
+          pickerCanvas.height = backingH;
+          pickerCanvas.getContext('2d').drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
+          pickerCanvasEl = element;
           pickerCanvasKey = key;
-        } else if (element.tagName === 'VIDEO') {
-          const drawCtx = pickerCanvas.getContext('2d');
-          drawCtx.drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
+        } else if (element.tagName !== 'IMG') {
+          pickerCanvas.getContext('2d').drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
         }
 
         const ctx = pickerCanvas.getContext('2d');
@@ -631,16 +507,17 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     function onKeyDown(e) {
       if (e.key === 'Escape' && isActive) {
         log('[WDR] Color picker cancelled');
-        cleanup();
+        cleanup('cancelled');
       }
     }
 
-    function cleanup() {
+    function cleanup(reason) {
       if (!isActive) return;
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
       activeToolCleanup = null;
       isActive = false;
+      if (reason === 'cancelled') safeSend({ action: 'toolCancelled' });
 
       document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('click', onClick, true);
@@ -655,6 +532,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       }
 
       pickerCanvas = null;
+      pickerCanvasEl = null;
       pickerCanvasKey = null;
 
       log('[WDR] Color picker cleanup complete');
@@ -861,8 +739,25 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       // Get the actual rendered font
       const renderedFont = getRenderedFont(fontFamilyStack, fontWeight, style.fontStyle);
 
+      // A "web font" is one the page provides via @font-face: the page's
+      // FontFaceSet lists CSS-connected faces only, never system fonts.
+      // This must run here, in the page document — the popup's FontFaceSet
+      // knows nothing about the inspected page.
+      let isWebFont = false;
+      try {
+        if (document.fonts) {
+          for (const face of document.fonts) {
+            if (face.status === 'loaded' && face.family.replace(/^["']|["']$/g, '') === renderedFont) {
+              isWebFont = true;
+              break;
+            }
+          }
+        }
+      } catch (e) { /* FontFaceSet unavailable — leave false */ }
+
       return {
         fontFamily: renderedFont,
+        isWebFont: isWebFont,
         fontFamilyStack: fontFamilyStack,
         fontSize: style.fontSize,
         fontWeight: `${fontWeight} (${fontWeightName})`,
@@ -949,16 +844,17 @@ color: ${rgbToHex(style.color)};`
 
     function onKeyDown(e) {
       if (e.key === 'Escape' && isActive) {
-        cleanup();
+        cleanup('cancelled');
       }
     }
 
-    function cleanup() {
+    function cleanup(reason) {
       if (!isActive) return;
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
       activeToolCleanup = null;
       isActive = false;
+      if (reason === 'cancelled') safeSend({ action: 'toolCancelled' });
 
       document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('click', onClick, true);
@@ -1234,7 +1130,7 @@ color: ${rgbToHex(style.color)};`
     function onKeyDown(e) {
       if (e.key === 'Shift') { shiftHeld = true; return; }
       if (e.key === 'Escape' && isActive) {
-        cleanup();
+        cleanup('cancelled');
       }
     }
 
@@ -1242,12 +1138,13 @@ color: ${rgbToHex(style.color)};`
       if (e.key === 'Shift') { shiftHeld = false; }
     }
 
-    function cleanup() {
+    function cleanup(reason) {
       if (!isActive) return;
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
       activeToolCleanup = null;
       isActive = false;
+      if (reason === 'cancelled') safeSend({ action: 'toolCancelled' });
 
       overlay.removeEventListener('mousedown', onMouseDown);
       overlay.removeEventListener('mousemove', onMouseMove);
@@ -1321,8 +1218,9 @@ color: ${rgbToHex(style.color)};`
   async function collectPageColors() {
     log('[WDR] Collecting page colors');
     const colors = new Set();
-    const MAX_ELEMENTS = 500;
+    const MAX_ELEMENTS = 5000;
     const MAX_COLORS = 64;
+    const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE', 'NOSCRIPT', 'TEMPLATE']);
 
     function addRaw(raw) {
       if (!raw) return;
@@ -1339,11 +1237,15 @@ color: ${rgbToHex(style.color)};`
       for (const m of matches) addRaw(m);
     }
 
-    const elements = document.querySelectorAll('*');
+    // Scan body content only: head/script/style nodes have no rendered colors
+    // and would otherwise burn the element budget before real content.
+    const elements = document.body ? document.body.querySelectorAll('*') : [];
     let count = 0;
     for (const el of elements) {
       if (count >= MAX_ELEMENTS) break;
       if (colors.size >= MAX_COLORS) break;
+      if (SKIP_TAGS.has(el.tagName)) continue;
+      if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue;
       count++;
 
       const style = window.getComputedStyle(el);
