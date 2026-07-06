@@ -12,6 +12,37 @@ a sidebar UI cut before AMO submission. Newest first.
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-07-06
+
+v1.1.1 feature parity restoration. Six features ported from the legacy
+Firefox build, rewritten to current conventions (guards, single-writer
+storage, no innerHTML, all three builds). No new permissions.
+
+### Added
+- **Copy All Colors on Page** (Feature 3.1). Context-menu action walks
+  visible elements' computed styles (color, background, borders,
+  gradients, shadows), dedupes to hex (cap 64), copies as CSS custom
+  properties, and auto-creates a palette. Legacy `#000` precedence bug
+  fixed.
+- **Measure tool area + Shift-snap** (Feature 3.2). Holding Shift snaps
+  to a 10 px grid. Panel shows area (`A: {w×h} px²`, formatted `12.4k`
+  above 9999). Popup displays area. Stored in measurement object.
+- **Full font history** (Feature 3.3). Per-item live preview in detected
+  font, Web Font badge via `document.fonts.check()`, copy-CSS per item,
+  cap 50 with show-all expansion.
+- **Right-click picks text color** (Feature 3.4). While eyedropping,
+  `contextmenu` selects the text color instead of background. Panel
+  hint mentions it.
+- **First-run welcome page + toolbar badge** (Feature 3.5).
+  `welcome/welcome.html` opened on install only. Badge: green `●` on
+  tool activation, `✓` for 2 s on completion, then clears.
+- **Firefox default palette seed** (Feature 3.6). Third seeded palette
+  `"Firefox"` (`#FF9500`, `#002147`, `#00FEFF`, `#B1B1B3`, `#FFFFFF`).
+  Chrome/Edge unchanged.
+
+### Changed
+- All three manifests bumped `2.1.0` → `2.2.0`.
+
 ## [2.1.0] — 2026-07-06
 
 Performance, accessibility, and new tools. No new permissions (options
