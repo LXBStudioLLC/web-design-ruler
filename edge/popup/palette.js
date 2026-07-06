@@ -34,8 +34,13 @@ function saveToPalette(paletteName, color, callback) {
  * @param {Array} colors - Initial colors array
  * @param {Function} callback - Callback when complete
  */
-function createPalette(paletteName, colors = [], callback) {
+function createPalette(paletteName, colors = [], callback, { overwrite = false } = {}) {
   chrome.storage.local.get('palettes', ({ palettes = {} }) => {
+    if (palettes[paletteName] && !overwrite) {
+      if (callback) callback(false, 'exists');
+      return;
+    }
+
     palettes[paletteName] = colors;
 
     chrome.storage.local.set({ palettes }, () => {
@@ -121,4 +126,19 @@ function getPalette(paletteName, callback) {
   chrome.storage.local.get('palettes', ({ palettes = {} }) => {
     callback(palettes[paletteName] || null);
   });
+}
+
+function validatePaletteColors(colors) {
+  if (!Array.isArray(colors) || colors.length > 200) return null;
+  const validated = [];
+  for (const c of colors) {
+    if (typeof c !== 'string') return null;
+    let normalized = c.trim();
+    if (/^#[0-9a-f]{3}$/i.test(normalized)) {
+      normalized = '#' + normalized[1] + normalized[1] + normalized[2] + normalized[2] + normalized[3] + normalized[3];
+    }
+    if (!/^#[0-9a-f]{6}$/i.test(normalized)) return null;
+    validated.push(normalized.toUpperCase());
+  }
+  return validated;
 }

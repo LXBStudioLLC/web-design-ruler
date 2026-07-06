@@ -306,10 +306,14 @@ function initializePalettes() {
   document.getElementById('create-palette').addEventListener('click', () => {
     const name = prompt('Enter palette name:');
     if (name && name.trim()) {
-      createPalette(name.trim(), [], () => {
-        currentPaletteName = name.trim();
-        loadPalettes(updatePaletteDisplay);
-        showNotification('Palette created!', 'success');
+      createPalette(name.trim(), [], (success, reason) => {
+        if (success) {
+          currentPaletteName = name.trim();
+          loadPalettes(updatePaletteDisplay);
+          showNotification('Palette created!', 'success');
+        } else if (reason === 'exists') {
+          showNotification(`A palette named "${name.trim()}" already exists`, 'error');
+        }
       });
     }
   });
@@ -334,14 +338,30 @@ function initializePalettes() {
       reader.onload = (event) => {
         try {
           const data = JSON.parse(event.target.result);
-          if (data.name && Array.isArray(data.colors)) {
-            createPalette(data.name, data.colors, () => {
-              loadPalettes(updatePaletteDisplay);
-              showNotification('Palette imported!', 'success');
-            });
-          } else {
+          if (!data.name || typeof data.name !== 'string') {
             showNotification('Invalid palette file', 'error');
+            return;
           }
+          const validatedColors = validatePaletteColors(data.colors);
+          if (!validatedColors) {
+            showNotification('Invalid palette file', 'error');
+            return;
+          }
+          loadPalettes((palettes) => {
+            let finalName = data.name.trim();
+            if (palettes[finalName]) {
+              let i = 2;
+              while (palettes[`${finalName} (${i})`]) i++;
+              finalName = `${finalName} (${i})`;
+            }
+            createPalette(finalName, validatedColors, () => {
+              loadPalettes(updatePaletteDisplay);
+              showNotification(
+                finalName === data.name.trim() ? 'Palette imported!' : `Imported as "${finalName}"`,
+                'success'
+              );
+            });
+          });
         } catch (error) {
           showNotification('Error importing palette', 'error');
         }

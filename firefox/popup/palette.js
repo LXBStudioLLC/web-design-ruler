@@ -40,9 +40,13 @@ async function saveToPalette(paletteName, color, callback) {
   }
 }
 
-async function createPalette(paletteName, colors = [], callback) {
+async function createPalette(paletteName, colors = [], callback, { overwrite = false } = {}) {
   try {
     const { palettes = {} } = await browserAPI.storage.local.get('palettes');
+    if (palettes[paletteName] && !overwrite) {
+      if (callback) callback(false, 'exists');
+      return;
+    }
     palettes[paletteName] = colors;
     await browserAPI.storage.local.set({ palettes });
     if (callback) callback(true);
@@ -120,4 +124,19 @@ async function getPalette(paletteName, callback) {
     console.error('[WDR-Firefox] getPalette error:', error);
     callback(null);
   }
+}
+
+function validatePaletteColors(colors) {
+  if (!Array.isArray(colors) || colors.length > 200) return null;
+  const validated = [];
+  for (const c of colors) {
+    if (typeof c !== 'string') return null;
+    let normalized = c.trim();
+    if (/^#[0-9a-f]{3}$/i.test(normalized)) {
+      normalized = '#' + normalized[1] + normalized[1] + normalized[2] + normalized[2] + normalized[3] + normalized[3];
+    }
+    if (!/^#[0-9a-f]{6}$/i.test(normalized)) return null;
+    validated.push(normalized.toUpperCase());
+  }
+  return validated;
 }
