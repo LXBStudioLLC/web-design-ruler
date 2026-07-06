@@ -309,7 +309,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     });
 
     const initSpan = createElement('span', {});
-    initSpan.textContent = 'Hover over any element. Click to pick background, or click swatches below. ESC to cancel.';
+    initSpan.textContent = 'Hover any element. Click = background color, right-click = text color. ESC to cancel.';
 
     const pixelContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' });
     pixelContainer.dataset.colorType = 'pixel';
@@ -523,6 +523,15 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       }
     }
 
+    function onContextMenu(e) {
+      if (!isActive) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (currentTextColor) {
+        selectColor(currentTextColor, 'text');
+      }
+    }
+
     function onKeyDown(e) {
       if (e.key === 'Escape' && isActive) {
         log('[WDR-Firefox] Color picker cancelled');
@@ -539,6 +548,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
       document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('click', onClick, true);
+      document.removeEventListener('contextmenu', onContextMenu, true);
       document.removeEventListener('keydown', onKeyDown, true);
 
       document.body.style.cursor = originalCursor;
@@ -559,6 +569,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     // Use capture phase to ensure we get the events first
     document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('click', onClick, true);
+    document.addEventListener('contextmenu', onContextMenu, true);
     document.addEventListener('keydown', onKeyDown, true);
   }
 
@@ -862,6 +873,7 @@ color: ${rgbToHex(style.color)};`
     let startX = 0, startY = 0, endX = 0, endY = 0;
     let rafId = null;
     let lastMoveEvent = null;
+    let shiftHeld = false;
 
     // Create overlay to capture mouse events
     const overlay = createElement('div', {
@@ -933,7 +945,7 @@ color: ${rgbToHex(style.color)};`
     const measureInstruction = createElement('div', { color: '#9CA3AF' });
     measureInstruction.textContent = 'Click and drag to measure';
 
-    const mGrid = createElement('div', { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' });
+    const mGrid = createElement('div', { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' });
     mGrid.style.display = 'none';
 
     const wCell = createElement('div', {});
@@ -954,7 +966,13 @@ color: ${rgbToHex(style.color)};`
     const dValue = createElement('span', {});
     dCell.replaceChildren(dLabel, dValue);
 
-    mGrid.replaceChildren(wCell, hCell, dCell);
+    const aCell = createElement('div', {});
+    const aLabel = createElement('span', { color: '#9CA3AF' });
+    aLabel.textContent = 'A:';
+    const aValue = createElement('span', {});
+    aCell.replaceChildren(aLabel, aValue);
+
+    mGrid.replaceChildren(wCell, hCell, dCell, aCell);
 
     const mFooter = createElement('div', { color: '#9CA3AF', fontSize: '11px', marginTop: '10px' });
     mFooter.textContent = 'Release to save';
@@ -963,10 +981,16 @@ color: ${rgbToHex(style.color)};`
     panel.replaceChildren(measureHeader, measureInstruction, mGrid, mFooter);
     document.body.appendChild(panel);
 
+    function formatArea(a) {
+      if (a > 9999) return (a / 1000).toFixed(1) + 'k';
+      return String(a);
+    }
+
     function updateMeasurement() {
       const width = Math.abs(endX - startX);
       const height = Math.abs(endY - startY);
       const diagonal = Math.round(Math.sqrt(width * width + height * height));
+      const area = width * height;
       const left = Math.min(startX, endX);
       const top = Math.min(startY, endY);
 
@@ -999,13 +1023,21 @@ color: ${rgbToHex(style.color)};`
       wValue.textContent = ' ' + width + 'px';
       hValue.textContent = ' ' + height + 'px';
       dValue.textContent = ' ' + diagonal + 'px';
+      aValue.textContent = ' ' + formatArea(area) + ' px\u00B2';
     }
 
     function onMouseDown(e) {
       if (!isActive) return;
+      shiftHeld = e.shiftKey;
       isDrawing = true;
-      startX = endX = e.clientX;
-      startY = endY = e.clientY;
+      let x = e.clientX;
+      let y = e.clientY;
+      if (shiftHeld) {
+        x = Math.round(x / 10) * 10;
+        y = Math.round(y / 10) * 10;
+      }
+      startX = endX = x;
+      startY = endY = y;
       e.preventDefault();
     }
 
@@ -1018,8 +1050,15 @@ color: ${rgbToHex(style.color)};`
     function processMove() {
       rafId = null;
       if (!isActive || !isDrawing || !lastMoveEvent) return;
-      endX = lastMoveEvent.clientX;
-      endY = lastMoveEvent.clientY;
+      shiftHeld = lastMoveEvent.shiftKey;
+      let x = lastMoveEvent.clientX;
+      let y = lastMoveEvent.clientY;
+      if (shiftHeld) {
+        x = Math.round(x / 10) * 10;
+        y = Math.round(y / 10) * 10;
+      }
+      endX = x;
+      endY = y;
       updateMeasurement();
     }
 
@@ -1027,14 +1066,24 @@ color: ${rgbToHex(style.color)};`
       if (!isActive || !isDrawing) return;
 
       isDrawing = false;
-      endX = e.clientX;
-      endY = e.clientY;
+      shiftHeld = e.shiftKey;
+      let x = e.clientX;
+      let y = e.clientY;
+      if (shiftHeld) {
+        x = Math.round(x / 10) * 10;
+        y = Math.round(y / 10) * 10;
+      }
+      endX = x;
+      endY = y;
       updateMeasurement();
 
+      const width = Math.abs(endX - startX);
+      const height = Math.abs(endY - startY);
       const measurements = {
-        width: Math.abs(endX - startX),
-        height: Math.abs(endY - startY),
-        diagonal: Math.round(Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)))
+        width: width,
+        height: height,
+        diagonal: Math.round(Math.sqrt(width * width + height * height)),
+        area: width * height
       };
 
       safeSend({ action: 'measurementTaken', measurements });
@@ -1045,7 +1094,7 @@ color: ${rgbToHex(style.color)};`
       const savedTitle = createElement('div', { fontWeight: '600', marginTop: '8px' });
       savedTitle.textContent = 'Saved!';
       const savedMeasurements = createElement('div', { fontSize: '14px', marginTop: '8px' });
-      savedMeasurements.textContent = measurements.width + ' x ' + measurements.height + ' px';
+      savedMeasurements.textContent = measurements.width + ' x ' + measurements.height + ' px \u2014 ' + formatArea(measurements.area) + ' px\u00B2';
       savedWrap.replaceChildren(savedCheck, savedTitle, savedMeasurements);
       panel.replaceChildren(savedWrap);
 
@@ -1053,7 +1102,14 @@ color: ${rgbToHex(style.color)};`
     }
 
     function onKeyDown(e) {
-      if (e.key === 'Escape' && isActive) cleanup();
+      if (e.key === 'Shift') { shiftHeld = true; return; }
+      if (e.key === 'Escape' && isActive) {
+        cleanup();
+      }
+    }
+
+    function onKeyUp(e) {
+      if (e.key === 'Shift') { shiftHeld = false; }
     }
 
     function cleanup() {
@@ -1069,6 +1125,7 @@ color: ${rgbToHex(style.color)};`
       window.removeEventListener('mouseup', onMouseUp);
       document.documentElement.removeEventListener('mouseleave', onMouseLeave);
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('keyup', onKeyUp, true);
 
       document.body.style.cursor = originalCursor;
       document.body.style.userSelect = originalUserSelect;
@@ -1092,6 +1149,99 @@ color: ${rgbToHex(style.color)};`
     }
     document.documentElement.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keyup', onKeyUp, true);
+  }
+
+  // ============================================================================
+  // COPY ALL COLORS TOOL
+  // ============================================================================
+
+  const COLOR_TOKEN_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b|rgba?\([^)]+\)/g;
+
+  function showCollectionToast(count) {
+    const toast = createElement('div', {
+      position: 'fixed',
+      bottom: '20px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      backgroundColor: COLORS.overlay,
+      color: 'white',
+      padding: '12px 20px',
+      borderRadius: '8px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontSize: '14px',
+      zIndex: Z_INDEX_MAX,
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px'
+    });
+    const checkSpan = createElement('span', { color: COLORS.success, fontSize: '20px' });
+    checkSpan.textContent = '\u2713';
+    const labelSpan = createElement('span', {});
+    labelSpan.textContent = 'Copied ' + count + ' colors as CSS custom properties';
+    toast.replaceChildren(checkSpan, labelSpan);
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 2500);
+  }
+
+  async function collectPageColors() {
+    log('[WDR-Firefox] Collecting page colors');
+    const colors = new Set();
+    const MAX_ELEMENTS = 500;
+    const MAX_COLORS = 64;
+
+    function addRaw(raw) {
+      if (!raw) return;
+      if (raw === 'none' || raw === 'initial' || raw === 'inherit' || raw === 'unset') return;
+      if ((!raw) || (raw === 'transparent') || (raw === 'rgba(0, 0, 0, 0)')) return;
+      const hex = rgbToHex(raw);
+      if (hex) colors.add(hex);
+    }
+
+    function extractTokens(value) {
+      if (!value || value === 'none') return;
+      const matches = value.match(COLOR_TOKEN_RE);
+      if (!matches) return;
+      for (const m of matches) addRaw(m);
+    }
+
+    const elements = document.querySelectorAll('*');
+    let count = 0;
+    for (const el of elements) {
+      if (count >= MAX_ELEMENTS) break;
+      if (colors.size >= MAX_COLORS) break;
+      count++;
+
+      const style = window.getComputedStyle(el);
+      addRaw(style.color);
+      addRaw(style.backgroundColor);
+      addRaw(style.borderTopColor);
+      addRaw(style.borderRightColor);
+      addRaw(style.borderBottomColor);
+      addRaw(style.borderLeftColor);
+      extractTokens(style.backgroundImage);
+      extractTokens(style.boxShadow);
+      extractTokens(style.textShadow);
+    }
+
+    const result = Array.from(colors).slice(0, MAX_COLORS);
+
+    const cssText = result.map((c, i) => '--color-' + (i + 1) + ': ' + c + ';').join('\n');
+    await copyToClipboard(cssText);
+
+    showCollectionToast(result.length);
+
+    safeSend({
+      action: 'pageColorsCollected',
+      colors: result,
+      hostname: location.hostname
+    });
+
+    log('[WDR-Firefox] Page colors collected:', result.length);
   }
 
   // ============================================================================
@@ -1118,6 +1268,11 @@ color: ${rgbToHex(style.color)};`
 
       case 'activateMeasureTool':
         activateMeasureTool();
+        sendResponse({ success: true });
+        return false;
+
+      case 'copyAllColors':
+        collectPageColors();
         sendResponse({ success: true });
         return false;
 

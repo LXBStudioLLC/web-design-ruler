@@ -31,8 +31,26 @@ const RESTRICTED_URL_PATTERNS = [
 const MENU_ITEMS = [
   { id: 'wdr-eyedropper', title: 'Pick Color', action: 'activateColorPicker' },
   { id: 'wdr-font-detector', title: 'Identify Font', action: 'activateFontDetector' },
-  { id: 'wdr-measure-tool', title: 'Measure', action: 'activateMeasureTool' }
+  { id: 'wdr-measure-tool', title: 'Measure', action: 'activateMeasureTool' },
+  { id: 'wdr-copy-all-colors', title: 'Copy All Colors', action: 'copyAllColors' }
 ];
+
+const BADGE_COLOR = '#10B981';
+let badgeClearTimer = null;
+
+function setBadge(text) {
+  chrome.action.setBadgeBackgroundColor({ color: BADGE_COLOR });
+  chrome.action.setBadgeText({ text: text });
+}
+
+function flashDoneBadge() {
+  if (badgeClearTimer) clearTimeout(badgeClearTimer);
+  setBadge('\u2713');
+  badgeClearTimer = setTimeout(() => {
+    setBadge('');
+    badgeClearTimer = null;
+  }, 2000);
+}
 
 // ============================================================================
 // INITIALIZATION
@@ -97,6 +115,9 @@ chrome.runtime.onInstalled.addListener((details) => {
   log('[WDR] Extension installed/updated:', details.reason);
   initializeStorage();
   createContextMenus();
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome/welcome.html') });
+  }
 });
 
 // Service worker startup - recreate menus (they don't persist across restarts)
@@ -263,6 +284,7 @@ async function activateTool(actionType, tab = null) {
         }
 
         log('[WDR] Tool activated:', actionType);
+        setBadge('\u25CF');
         resolve({ success: true });
       });
     });
@@ -313,6 +335,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Forward to popup if open
     chrome.runtime.sendMessage(message).catch(() => {});
+    flashDoneBadge();
     sendResponse({ success: true });
     return true;
   }
@@ -320,6 +343,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'fontDetected' && message.fontDetails) {
     chrome.storage.local.set({ lastDetectedFont: message.fontDetails });
     chrome.runtime.sendMessage(message).catch(() => {});
+    flashDoneBadge();
     sendResponse({ success: true });
     return true;
   }
@@ -327,6 +351,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'measurementTaken' && message.measurements) {
     chrome.storage.local.set({ lastMeasurement: message.measurements });
     chrome.runtime.sendMessage(message).catch(() => {});
+    flashDoneBadge();
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.action === 'pageColorsCollected' && message.colors) {
+    const hostname = message.hostname || 'Page';
+    const date = new Date().toISOString().slice(0, 10);
+    const baseName = 'Page Colors \u2014 ' + hostname + ' ' + date;
+    chrome.storage.local.get('palettes', ({ palettes = {} }) => {
+      let finalName = baseName;
+      if (palettes[finalName]) {
+        let i = 2;
+        while (palettes[finalName + ' (' + i + ')']) i++;
+        finalName = finalName + ' (' + i + ')';
+      }
+      const validated = (message.colors || []).filter(c => typeof c === 'string' && /^#[0-9A-F]{6}$/i.test(c));
+      palettes[finalName] = validated;
+      chrome.storage.local.set({ palettes }, () => {
+        log('[WDR] Palette created from page colors:', finalName, '(' + validated.length + ' colors)');
+      });
+    });
+    flashDoneBadge();
     sendResponse({ success: true });
     return true;
   }

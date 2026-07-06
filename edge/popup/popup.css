@@ -504,15 +504,52 @@ main {
   background: var(--gray-50);
   border-radius: 4px;
   font-size: 12px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .saved-font-item .font-info {
   cursor: pointer;
   flex: 1;
+  min-width: 0;
 }
 
 .saved-font-item .font-info:hover {
   color: var(--primary);
+}
+
+.saved-font-preview {
+  cursor: pointer;
+  padding: 2px 8px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  min-width: 32px;
+  text-align: center;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-font-preview:hover {
+  border-color: var(--primary);
+}
+
+.web-font-badge {
+  background: var(--success);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.saved-font-copy {
+  padding: 2px 8px;
+  font-size: 11px;
 }
 
 .saved-font-item .remove-btn {
@@ -838,6 +875,11 @@ footer a:hover {
 
   .saved-font-item {
     background: var(--gray-200);
+  }
+
+  .saved-font-preview {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
   }
 
   .notification.info {

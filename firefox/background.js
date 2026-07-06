@@ -45,8 +45,26 @@ const RESTRICTED_URL_PATTERNS = [
 const MENU_ITEMS = [
   { id: 'wdr-eyedropper', title: 'Pick Color', action: 'activateColorPicker' },
   { id: 'wdr-font-detector', title: 'Identify Font', action: 'activateFontDetector' },
-  { id: 'wdr-measure-tool', title: 'Measure', action: 'activateMeasureTool' }
+  { id: 'wdr-measure-tool', title: 'Measure', action: 'activateMeasureTool' },
+  { id: 'wdr-copy-all-colors', title: 'Copy All Colors', action: 'copyAllColors' }
 ];
+
+const BADGE_COLOR = '#10B981';
+let badgeClearTimer = null;
+
+function setBadge(text) {
+  browserAPI.action.setBadgeBackgroundColor({ color: BADGE_COLOR });
+  browserAPI.action.setBadgeText({ text: text });
+}
+
+function flashDoneBadge() {
+  if (badgeClearTimer) clearTimeout(badgeClearTimer);
+  setBadge('\u2713');
+  badgeClearTimer = setTimeout(() => {
+    setBadge('');
+    badgeClearTimer = null;
+  }, 2000);
+}
 
 // ============================================================================
 // INITIALIZATION
@@ -85,7 +103,8 @@ async function initializeStorage() {
     if (!result.palettes) {
       updates.palettes = {
         'Web Design Ruler': ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#6366F1'],
-        'Neutrals': ['#000000', '#374151', '#6B7280', '#D1D5DB', '#FFFFFF']
+        'Neutrals': ['#000000', '#374151', '#6B7280', '#D1D5DB', '#FFFFFF'],
+        'Firefox': ['#FF9500', '#002147', '#00FEFF', '#B1B1B3', '#FFFFFF']
       };
     }
     if (!result.recentColors) {
@@ -106,6 +125,9 @@ browserAPI.runtime.onInstalled.addListener(async (details) => {
   log('[WDR-Firefox] Extension installed:', details.reason);
   await initializeStorage();
   await createContextMenus();
+  if (details.reason === 'install') {
+    browserAPI.tabs.create({ url: browserAPI.runtime.getURL('welcome/welcome.html') });
+  }
 });
 
 // Initialize on script load (Firefox doesn't need startup listener as much)
@@ -227,6 +249,7 @@ async function activateTool(actionType, tab = null) {
     try {
       await browserAPI.tabs.sendMessage(tab.id, { action: actionType });
       log('[WDR-Firefox] Tool activated:', actionType);
+      setBadge('\u25CF');
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Failed to activate tool. Try refreshing.' };
@@ -282,6 +305,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
 
     browserAPI.runtime.sendMessage(message).catch(() => {});
+    flashDoneBadge();
     sendResponse({ success: true });
     return false;
   }
@@ -289,6 +313,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'fontDetected' && message.fontDetails) {
     browserAPI.storage.local.set({ lastDetectedFont: message.fontDetails });
     browserAPI.runtime.sendMessage(message).catch(() => {});
+    flashDoneBadge();
     sendResponse({ success: true });
     return false;
   }
@@ -296,6 +321,29 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'measurementTaken' && message.measurements) {
     browserAPI.storage.local.set({ lastMeasurement: message.measurements });
     browserAPI.runtime.sendMessage(message).catch(() => {});
+    flashDoneBadge();
+    sendResponse({ success: true });
+    return false;
+  }
+
+  if (message.action === 'pageColorsCollected' && message.colors) {
+    const hostname = message.hostname || 'Page';
+    const date = new Date().toISOString().slice(0, 10);
+    const baseName = 'Page Colors \u2014 ' + hostname + ' ' + date;
+    browserAPI.storage.local.get('palettes').then(({ palettes = {} }) => {
+      let finalName = baseName;
+      if (palettes[finalName]) {
+        let i = 2;
+        while (palettes[finalName + ' (' + i + ')']) i++;
+        finalName = finalName + ' (' + i + ')';
+      }
+      const validated = (message.colors || []).filter(c => typeof c === 'string' && /^#[0-9A-F]{6}$/i.test(c));
+      palettes[finalName] = validated;
+      browserAPI.storage.local.set({ palettes }).then(() => {
+        log('[WDR-Firefox] Palette created from page colors:', finalName, '(' + validated.length + ' colors)');
+      });
+    });
+    flashDoneBadge();
     sendResponse({ success: true });
     return false;
   }

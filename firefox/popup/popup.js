@@ -339,8 +339,16 @@ function displayFontDetails(fontDetails) {
 
   document.getElementById('save-font').onclick = async () => {
     try {
+      let isWebFont = false;
+      try {
+        if (document.fonts && typeof document.fonts.check === 'function') {
+          isWebFont = document.fonts.check(fontDetails.fontSize + ' ' + fontDetails.fontFamilyStack);
+        }
+      } catch (e) {
+        isWebFont = false;
+      }
       const { savedFonts = [] } = await browserAPI.storage.local.get('savedFonts');
-      savedFonts.unshift({ ...fontDetails, savedAt: new Date().toISOString() });
+      savedFonts.unshift({ ...fontDetails, isWebFont, savedAt: new Date().toISOString() });
       await browserAPI.storage.local.set({ savedFonts: savedFonts.slice(0, 50) });
       showNotification('Font saved!', 'success');
       renderSavedFonts();
@@ -350,25 +358,67 @@ function displayFontDetails(fontDetails) {
   };
 }
 
+let savedFontsExpanded = false;
+
 function renderSavedFonts() {
   browserAPI.storage.local.get('savedFonts').then(({ savedFonts = [] }) => {
     const container = document.getElementById('saved-fonts');
     const list = document.getElementById('saved-fonts-list');
     if (!savedFonts || savedFonts.length === 0) {
       container.classList.add('hidden');
+      list.replaceChildren();
+      const oldShowAll = document.getElementById('show-all-fonts');
+      if (oldShowAll) oldShowAll.remove();
       return;
     }
     container.classList.remove('hidden');
-    list.innerHTML = '';
-    savedFonts.slice(0, 10).forEach((entry, index) => {
+    list.replaceChildren();
+
+    const showCount = savedFontsExpanded ? savedFonts.length : 10;
+    const visible = savedFonts.slice(0, showCount);
+
+    visible.forEach((entry, index) => {
       const item = document.createElement('li');
       item.className = 'saved-font-item';
 
+      const preview = document.createElement('span');
+      preview.className = 'saved-font-preview';
+      preview.style.fontFamily = entry.fontFamilyStack || entry.fontFamily;
+      preview.style.fontSize = '15px';
+      preview.textContent = 'Aa';
+      preview.title = 'Click to view details';
+      preview.addEventListener('click', () => displayFontDetails(entry));
+
       const info = document.createElement('span');
       info.className = 'font-info';
-      info.textContent = `${entry.fontFamily} \u2014 ${entry.fontSize} / ${entry.fontWeight}`;
-      info.title = `Saved ${new Date(entry.savedAt).toLocaleString()}`;
+      info.textContent = entry.fontFamily + ' \u2014 ' + entry.fontSize + ' / ' + entry.fontWeight;
+      info.title = 'Saved ' + new Date(entry.savedAt).toLocaleString();
       info.addEventListener('click', () => displayFontDetails(entry));
+
+      if (entry.isWebFont) {
+        const badge = document.createElement('span');
+        badge.className = 'web-font-badge';
+        badge.textContent = 'Web Font';
+        item.appendChild(preview);
+        item.appendChild(info);
+        item.appendChild(badge);
+      } else {
+        item.appendChild(preview);
+        item.appendChild(info);
+      }
+
+      const copyCssBtn = document.createElement('button');
+      copyCssBtn.className = 'copy-btn saved-font-copy';
+      copyCssBtn.textContent = 'CSS';
+      copyCssBtn.title = 'Copy CSS';
+      copyCssBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        copyToClipboard(entry.css || '');
+        const original = copyCssBtn.textContent;
+        copyCssBtn.textContent = 'Copied!';
+        setTimeout(() => { copyCssBtn.textContent = original; }, 1000);
+      });
+      item.appendChild(copyCssBtn);
 
       const removeBtn = document.createElement('button');
       removeBtn.className = 'remove-btn';
@@ -384,11 +434,25 @@ function renderSavedFonts() {
           });
         });
       });
-
-      item.appendChild(info);
       item.appendChild(removeBtn);
+
       list.appendChild(item);
     });
+
+    const oldShowAll = document.getElementById('show-all-fonts');
+    if (oldShowAll) oldShowAll.remove();
+    if (savedFonts.length > 10) {
+      const showAllBtn = document.createElement('button');
+      showAllBtn.id = 'show-all-fonts';
+      showAllBtn.className = 'secondary-btn full-width';
+      showAllBtn.style.marginTop = '8px';
+      showAllBtn.textContent = savedFontsExpanded ? 'Show less' : 'Show all (' + savedFonts.length + ')';
+      showAllBtn.addEventListener('click', () => {
+        savedFontsExpanded = !savedFontsExpanded;
+        renderSavedFonts();
+      });
+      list.insertAdjacentElement('afterend', showAllBtn);
+    }
   }).catch(() => {});
 }
 
@@ -401,6 +465,7 @@ function displayMeasurement(measurement) {
   const measureWidth = document.getElementById('measure-width');
   const measureHeight = document.getElementById('measure-height');
   const measureDiagonal = document.getElementById('measure-diagonal');
+  const measureArea = document.getElementById('measure-area');
   const visual = document.getElementById('measurement-visual');
 
   measureResult.classList.remove('hidden');
@@ -408,6 +473,11 @@ function displayMeasurement(measurement) {
   measureWidth.value = measurement.width;
   measureHeight.value = measurement.height;
   measureDiagonal.value = measurement.diagonal;
+  if (typeof measurement.area === 'number') {
+    measureArea.value = measurement.area;
+  } else {
+    measureArea.value = '';
+  }
 
   visual.innerHTML = '';
   const containerWidth = 320;
@@ -737,6 +807,9 @@ function initializeCopyButtons() {
           break;
         case 'diagonal':
           value = document.getElementById('measure-diagonal').value + 'px';
+          break;
+        case 'area':
+          value = document.getElementById('measure-area').value + 'px\u00B2';
           break;
       }
 
