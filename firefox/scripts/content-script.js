@@ -591,7 +591,7 @@ color: ${rgbToHex(style.color)};`
       if (!isActive) return;
 
       const element = document.elementFromPoint(e.clientX, e.clientY);
-      if (!element || element === panel || element === highlightBox) return;
+      if (!element || element === panel || panel.contains(element) || (highlightBox && highlightBox.contains(element))) return;
       if (element === highlightedElement) return;
 
       highlightedElement = element;
