@@ -30,6 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[WDR-Firefox] Initializing palettes...');
     initializePalettes();
 
+    document.getElementById('toggle-saved-fonts').addEventListener('click', () => {
+      const list = document.getElementById('saved-fonts-list');
+      const btn = document.getElementById('toggle-saved-fonts');
+      list.classList.toggle('collapsed');
+      btn.textContent = list.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+    });
+
     console.log('[WDR-Firefox] Loading stored data...');
     loadStoredData();
 
@@ -151,6 +158,8 @@ async function loadStoredData() {
   } catch (error) {
     console.error('[WDR-Firefox] loadStoredData error:', error);
   }
+
+  renderSavedFonts();
 }
 
 // ============================================================================
@@ -246,10 +255,53 @@ function displayFontDetails(fontDetails) {
       savedFonts.unshift({ ...fontDetails, savedAt: new Date().toISOString() });
       await browserAPI.storage.local.set({ savedFonts: savedFonts.slice(0, 50) });
       showNotification('Font saved!', 'success');
+      renderSavedFonts();
     } catch (error) {
       showNotification('Error saving font', 'error');
     }
   };
+}
+
+function renderSavedFonts() {
+  browserAPI.storage.local.get('savedFonts').then(({ savedFonts = [] }) => {
+    const container = document.getElementById('saved-fonts');
+    const list = document.getElementById('saved-fonts-list');
+    if (!savedFonts || savedFonts.length === 0) {
+      container.classList.add('hidden');
+      return;
+    }
+    container.classList.remove('hidden');
+    list.innerHTML = '';
+    savedFonts.slice(0, 10).forEach((entry, index) => {
+      const item = document.createElement('li');
+      item.className = 'saved-font-item';
+
+      const info = document.createElement('span');
+      info.className = 'font-info';
+      info.textContent = `${entry.fontFamily} \u2014 ${entry.fontSize} / ${entry.fontWeight}`;
+      info.title = `Saved ${new Date(entry.savedAt).toLocaleString()}`;
+      info.addEventListener('click', () => displayFontDetails(entry));
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '\u00D7';
+      removeBtn.setAttribute('aria-label', 'Remove saved font');
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        browserAPI.storage.local.get('savedFonts').then(({ savedFonts = [] }) => {
+          savedFonts.splice(index, 1);
+          browserAPI.storage.local.set({ savedFonts }).then(() => {
+            renderSavedFonts();
+            showNotification('Font removed', 'success');
+          });
+        });
+      });
+
+      item.appendChild(info);
+      item.appendChild(removeBtn);
+      list.appendChild(item);
+    });
+  }).catch(() => {});
 }
 
 // ============================================================================

@@ -357,6 +357,65 @@ main {
   flex: 1;
 }
 
+.saved-fonts {
+  margin-top: 16px;
+}
+
+.saved-fonts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.saved-fonts-header h3 {
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.saved-fonts-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.saved-fonts-list.collapsed {
+  display: none;
+}
+
+.saved-font-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--gray-50);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.saved-font-item .font-info {
+  cursor: pointer;
+  flex: 1;
+}
+
+.saved-font-item .font-info:hover {
+  color: var(--primary);
+}
+
+.saved-font-item .remove-btn {
+  padding: 2px 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--gray-400);
+}
+
+.saved-font-item .remove-btn:hover {
+  color: var(--danger);
+}
+
 /* Measure Tab */
 .measure-result {
   margin-top: 16px;
