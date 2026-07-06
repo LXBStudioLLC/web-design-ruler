@@ -145,6 +145,9 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     return typeof window.EyeDropper !== 'undefined';
   }
 
+  function extAlive() { try { return !!(chrome.runtime && chrome.runtime.id); } catch { return false; } }
+  function safeSend(msg) { if (!extAlive()) return; try { chrome.runtime.sendMessage(msg, () => void chrome.runtime.lastError); } catch (e) { console.warn('[WDR] sendMessage failed:', e.message); } }
+
   /**
    * Get color from image at specific coordinates using canvas
    * @param {HTMLImageElement} img - Image element
@@ -261,7 +264,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       console.log('[WDR] Color picked via EyeDropper:', color);
 
       // Notify background script (single-writer: background handles storage)
-      chrome.runtime.sendMessage({
+      safeSend({
         action: 'colorPicked',
         color: color
       });
@@ -435,7 +438,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       console.log('[WDR] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
 
       // Notify background script (single-writer: background handles storage)
-      chrome.runtime.sendMessage({
+      safeSend({
         action: 'colorPicked',
         color: selectedColor
       });
@@ -732,7 +735,7 @@ color: ${rgbToHex(style.color)};`
       const details = getFontDetails(highlightedElement);
       console.log('[WDR] Font detected:', details);
 
-      chrome.runtime.sendMessage({ action: 'fontDetected', fontDetails: details });
+      safeSend({ action: 'fontDetected', fontDetails: details });
 
       // Copy CSS to clipboard
       copyToClipboard(details.css);
@@ -941,7 +944,7 @@ color: ${rgbToHex(style.color)};`
 
       console.log('[WDR] Measurement taken:', measurements);
 
-      chrome.runtime.sendMessage({ action: 'measurementTaken', measurements });
+      safeSend({ action: 'measurementTaken', measurements });
 
       panel.innerHTML = `
         <div style="text-align:center;padding:15px;">
