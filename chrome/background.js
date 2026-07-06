@@ -6,7 +6,11 @@
  * with robust error handling and cross-browser compatibility.
  */
 
-console.log('[WDR] Background service worker started');
+let _debug = false;
+chrome.storage.local.get('settings', (data) => { _debug = (data.settings && data.settings.debugLogging) || false; });
+function log(...args) { if (_debug) console.log(...args); }
+
+log('[WDR] Background service worker started');
 
 // ============================================================================
 // CONSTANTS
@@ -51,7 +55,7 @@ function createContextMenus() {
         }
       });
     });
-    console.log('[WDR] Context menus created');
+    log('[WDR] Context menus created');
   });
 }
 
@@ -82,7 +86,7 @@ function initializeStorage() {
     }
     if (Object.keys(updates).length > 0) {
       chrome.storage.local.set(updates, () => {
-        console.log('[WDR] Storage initialized');
+        log('[WDR] Storage initialized');
       });
     }
   });
@@ -90,14 +94,14 @@ function initializeStorage() {
 
 // Install handler
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[WDR] Extension installed/updated:', details.reason);
+  log('[WDR] Extension installed/updated:', details.reason);
   initializeStorage();
   createContextMenus();
 });
 
 // Service worker startup - recreate menus (they don't persist across restarts)
 chrome.runtime.onStartup.addListener(() => {
-  console.log('[WDR] Browser startup detected');
+  log('[WDR] Browser startup detected');
   createContextMenus();
 });
 
@@ -140,7 +144,7 @@ async function isContentScriptLoaded(tabId) {
 
         // Check for runtime errors first
         if (chrome.runtime.lastError) {
-          console.log('[WDR] Ping failed:', chrome.runtime.lastError.message);
+          log('[WDR] Ping failed:', chrome.runtime.lastError.message);
           resolve(false);
           return;
         }
@@ -149,7 +153,7 @@ async function isContentScriptLoaded(tabId) {
       });
     } catch (error) {
       clearTimeout(timeout);
-      console.log('[WDR] Ping exception:', error.message);
+      log('[WDR] Ping exception:', error.message);
       resolve(false);
     }
   });
@@ -167,7 +171,7 @@ async function injectContentScript(tabId) {
       files: ['scripts/content-script.js'],
       world: 'ISOLATED'  // Explicit world for cross-browser compatibility
     });
-    console.log('[WDR] Content script injected successfully');
+    log('[WDR] Content script injected successfully');
     return true;
   } catch (error) {
     console.error('[WDR] Injection failed:', error.message);
@@ -184,13 +188,13 @@ async function ensureContentScript(tabId) {
   // First, check if already loaded
   let isLoaded = await isContentScriptLoaded(tabId);
   if (isLoaded) {
-    console.log('[WDR] Content script already loaded');
+    log('[WDR] Content script already loaded');
     return { success: true };
   }
 
   // Try injection with retries
   for (let attempt = 1; attempt <= MAX_INJECTION_RETRIES; attempt++) {
-    console.log(`[WDR] Injection attempt ${attempt}/${MAX_INJECTION_RETRIES}`);
+    log(`[WDR] Injection attempt ${attempt}/${MAX_INJECTION_RETRIES}`);
 
     const injected = await injectContentScript(tabId);
     if (!injected) {
@@ -258,7 +262,7 @@ async function activateTool(actionType, tab = null) {
           return;
         }
 
-        console.log('[WDR] Tool activated:', actionType);
+        log('[WDR] Tool activated:', actionType);
         resolve({ success: true });
       });
     });
@@ -277,14 +281,14 @@ async function activateTool(actionType, tab = null) {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   const menuItem = MENU_ITEMS.find(item => item.id === info.menuItemId);
   if (menuItem) {
-    console.log('[WDR] Context menu clicked:', menuItem.id);
+    log('[WDR] Context menu clicked:', menuItem.id);
     activateTool(menuItem.action, tab);
   }
 });
 
 // Message handler
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[WDR] Message received:', message.action);
+  log('[WDR] Message received:', message.action);
 
   // Handle tool activation requests from popup
   if (['activateColorPicker', 'activateFontDetector', 'activateMeasureTool'].includes(message.action)) {
@@ -332,7 +336,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Keyboard shortcuts
 chrome.commands.onCommand.addListener((command) => {
-  console.log('[WDR] Command received:', command);
+  log('[WDR] Command received:', command);
   if (command === 'activate_eyedropper') {
     activateTool('activateColorPicker');
   } else if (command === 'activate_font_detector') {
@@ -342,4 +346,4 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-console.log('[WDR] Background script initialization complete');
+log('[WDR] Background script initialization complete');

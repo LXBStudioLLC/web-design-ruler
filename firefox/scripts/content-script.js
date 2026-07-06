@@ -12,8 +12,6 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 } else {
   window.__WDR_CONTENT_SCRIPT_LOADED__ = true;
 
-  console.log('[WDR-Firefox] Content script loaded:', window.location.href);
-
   // Firefox compatibility - use browser.* if available, with robust detection
   let browserAPI;
   if (typeof browser !== 'undefined' && browser.runtime) {
@@ -23,6 +21,12 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   } else {
     console.error('[WDR-Firefox] No browser API found in content script!');
   }
+
+  let _debug = false;
+  try { browserAPI.storage.local.get('settings').then((data) => { _debug = (data.settings && data.settings.debugLogging) || false; }).catch(() => {}); } catch {}
+  function log(...args) { if (_debug) console.log(...args); }
+
+  log('[WDR-Firefox] Content script loaded:', window.location.href);
 
   // ============================================================================
   // CONSTANTS
@@ -264,7 +268,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   // ============================================================================
 
   function activateColorPicker() {
-    console.log('[WDR-Firefox] Activating color picker (fallback mode with image support)');
+    log('[WDR-Firefox] Activating color picker (fallback mode with image support)');
 
     if (activeToolCleanup) activeToolCleanup();
 
@@ -458,7 +462,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     }
 
     function selectColor(selectedColor, colorLabel) {
-      console.log('[WDR-Firefox] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
+      log('[WDR-Firefox] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
 
       // Notify background script (single-writer: background handles storage)
       safeSend({
@@ -521,7 +525,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function onKeyDown(e) {
       if (e.key === 'Escape' && isActive) {
-        console.log('[WDR-Firefox] Color picker cancelled');
+        log('[WDR-Firefox] Color picker cancelled');
         cleanup();
       }
     }
@@ -547,7 +551,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       pickerCanvas = null;
       pickerCanvasKey = null;
 
-      console.log('[WDR-Firefox] Color picker cleanup complete');
+      log('[WDR-Firefox] Color picker cleanup complete');
     }
 
     activeToolCleanup = cleanup;
@@ -563,7 +567,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   // ============================================================================
 
   function activateFontDetector() {
-    console.log('[WDR-Firefox] Activating font detector');
+    log('[WDR-Firefox] Activating font detector');
 
     if (activeToolCleanup) activeToolCleanup();
 
@@ -829,7 +833,7 @@ color: ${rgbToHex(style.color)};`
       if (panel.parentNode) panel.remove();
       if (highlightBox) highlightBox.remove();
 
-      console.log('[WDR-Firefox] Font detector cleanup complete');
+      log('[WDR-Firefox] Font detector cleanup complete');
     }
 
     activeToolCleanup = cleanup;
@@ -844,7 +848,7 @@ color: ${rgbToHex(style.color)};`
   // ============================================================================
 
   function activateMeasureTool() {
-    console.log('[WDR-Firefox] Activating measurement tool');
+    log('[WDR-Firefox] Activating measurement tool');
 
     if (activeToolCleanup) activeToolCleanup();
 
@@ -1073,7 +1077,7 @@ color: ${rgbToHex(style.color)};`
         if (el && el.parentNode) el.remove();
       });
 
-      console.log('[WDR-Firefox] Measurement tool cleanup complete');
+      log('[WDR-Firefox] Measurement tool cleanup complete');
     }
 
     activeToolCleanup = cleanup;
@@ -1095,7 +1099,7 @@ color: ${rgbToHex(style.color)};`
   // ============================================================================
 
   browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('[WDR-Firefox] Content script received:', message.action);
+    log('[WDR-Firefox] Content script received:', message.action);
 
     switch (message.action) {
       case 'ping':
@@ -1122,5 +1126,5 @@ color: ${rgbToHex(style.color)};`
     }
   });
 
-  console.log('[WDR-Firefox] Content script initialization complete');
+  log('[WDR-Firefox] Content script initialization complete');
 }

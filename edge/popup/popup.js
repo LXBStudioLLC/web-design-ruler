@@ -5,6 +5,10 @@
  * Handles popup UI interactions and communication with background script
  */
 
+let _debug = false;
+chrome.storage.local.get('settings', (data) => { _debug = (data.settings && data.settings.debugLogging) || false; });
+function log(...args) { if (_debug) console.log(...args); }
+
 // Global state
 let currentPaletteName = null;
 let palettes = {};
@@ -18,7 +22,7 @@ let armedSlot = null;
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[WDR] Popup loaded');
+  log('[WDR] Popup loaded');
   document.querySelector('.version').textContent = 'v' + chrome.runtime.getManifest().version;
 
   initializeTabs();
@@ -714,7 +718,7 @@ function initializeCopyButtons() {
 
 function listenForMessages() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('[WDR] Popup received:', message);
+    log('[WDR] Popup received:', message);
 
     if (message.action === 'colorPicked' && message.color) {
       displayPickedColor(message.color);

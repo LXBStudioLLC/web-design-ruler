@@ -13,7 +13,11 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 } else {
   window.__WDR_CONTENT_SCRIPT_LOADED__ = true;
 
-  console.log('[WDR] Content script loaded:', window.location.href);
+  let _debug = false;
+  try { chrome.storage.local.get('settings', (data) => { _debug = (data.settings && data.settings.debugLogging) || false; }); } catch {}
+  function log(...args) { if (_debug) console.log(...args); }
+
+  log('[WDR] Content script loaded:', window.location.href);
 
   // ============================================================================
   // CONSTANTS
@@ -290,14 +294,14 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
    * This provides true screen-wide color picking including images
    */
   async function activateColorPickerEyeDropper() {
-    console.log('[WDR] Activating color picker with EyeDropper API');
+    log('[WDR] Activating color picker with EyeDropper API');
 
     try {
       const eyeDropper = new EyeDropper();
       const result = await eyeDropper.open();
 
       const color = result.sRGBHex.toUpperCase();
-      console.log('[WDR] Color picked via EyeDropper:', color);
+      log('[WDR] Color picked via EyeDropper:', color);
 
       // Notify background script (single-writer: background handles storage)
       safeSend({
@@ -313,7 +317,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('[WDR] EyeDropper cancelled by user');
+        log('[WDR] EyeDropper cancelled by user');
       } else {
         console.error('[WDR] EyeDropper error:', error);
       }
@@ -360,7 +364,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
    * Enhanced with image/canvas/video support and dual color detection (background + text)
    */
   function activateColorPickerFallback() {
-    console.log('[WDR] Activating color picker (fallback mode with image support)');
+    log('[WDR] Activating color picker (fallback mode with image support)');
 
     if (activeToolCleanup) activeToolCleanup();
 
@@ -554,7 +558,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     }
 
     function selectColor(selectedColor, colorLabel) {
-      console.log('[WDR] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
+      log('[WDR] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
 
       // Notify background script (single-writer: background handles storage)
       safeSend({
@@ -617,7 +621,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function onKeyDown(e) {
       if (e.key === 'Escape' && isActive) {
-        console.log('[WDR] Color picker cancelled');
+        log('[WDR] Color picker cancelled');
         cleanup();
       }
     }
@@ -643,7 +647,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       pickerCanvas = null;
       pickerCanvasKey = null;
 
-      console.log('[WDR] Color picker cleanup complete');
+      log('[WDR] Color picker cleanup complete');
     }
 
     activeToolCleanup = cleanup;
@@ -660,9 +664,20 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
    * EyeDropper API can be used via activateColorPickerEyeDropper() if needed
    */
   function activateColorPicker() {
-    // Always use fallback mode to show the visual feedback panel at bottom
-    // This provides better UX with live color preview while hovering
-    activateColorPickerFallback();
+    if (extAlive()) {
+      try {
+        chrome.storage.local.get('settings', (data) => {
+          const settings = data.settings || {};
+          if (settings.useNativeEyeDropper && hasEyeDropperAPI()) {
+            activateColorPickerEyeDropper();
+          } else {
+            activateColorPickerFallback();
+          }
+        });
+      } catch { activateColorPickerFallback(); }
+    } else {
+      activateColorPickerFallback();
+    }
   }
 
   // ============================================================================
@@ -670,7 +685,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   // ============================================================================
 
   function activateFontDetector() {
-    console.log('[WDR] Activating font detector');
+    log('[WDR] Activating font detector');
 
     if (activeToolCleanup) activeToolCleanup();
 
@@ -901,7 +916,7 @@ color: ${rgbToHex(style.color)};`
       e.stopPropagation();
 
       const details = getFontDetails(highlightedElement);
-      console.log('[WDR] Font detected:', details);
+      log('[WDR] Font detected:', details);
 
       safeSend({ action: 'fontDetected', fontDetails: details });
 
@@ -944,7 +959,7 @@ color: ${rgbToHex(style.color)};`
       if (panel.parentNode) panel.remove();
       if (highlightBox) highlightBox.remove();
 
-      console.log('[WDR] Font detector cleanup complete');
+      log('[WDR] Font detector cleanup complete');
     }
 
     activeToolCleanup = cleanup;
@@ -959,7 +974,7 @@ color: ${rgbToHex(style.color)};`
   // ============================================================================
 
   function activateMeasureTool() {
-    console.log('[WDR] Activating measurement tool');
+    log('[WDR] Activating measurement tool');
 
     if (activeToolCleanup) activeToolCleanup();
 
@@ -1150,7 +1165,7 @@ color: ${rgbToHex(style.color)};`
         diagonal: Math.round(Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)))
       };
 
-      console.log('[WDR] Measurement taken:', measurements);
+      log('[WDR] Measurement taken:', measurements);
 
       safeSend({ action: 'measurementTaken', measurements });
 
@@ -1194,7 +1209,7 @@ color: ${rgbToHex(style.color)};`
         if (el && el.parentNode) el.remove();
       });
 
-      console.log('[WDR] Measurement tool cleanup complete');
+      log('[WDR] Measurement tool cleanup complete');
     }
 
     activeToolCleanup = cleanup;
@@ -1216,7 +1231,7 @@ color: ${rgbToHex(style.color)};`
   // ============================================================================
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('[WDR] Content script received:', message.action);
+    log('[WDR] Content script received:', message.action);
 
     switch (message.action) {
       case 'ping':
@@ -1243,5 +1258,5 @@ color: ${rgbToHex(style.color)};`
     }
   });
 
-  console.log('[WDR] Content script initialization complete');
+  log('[WDR] Content script initialization complete');
 }

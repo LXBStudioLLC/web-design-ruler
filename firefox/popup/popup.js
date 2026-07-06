@@ -6,6 +6,10 @@
  * Note: browserAPI is defined in palette.js which loads first
  */
 
+let _debug = false;
+browserAPI.storage.local.get('settings').then((data) => { _debug = (data.settings && data.settings.debugLogging) || false; }).catch(() => {});
+function log(...args) { if (_debug) console.log(...args); }
+
 let currentPaletteName = null;
 let palettes = {};
 let removeColorTarget = null;
@@ -18,20 +22,20 @@ let armedSlot = null;
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[WDR-Firefox] Popup loaded, initializing...');
+  log('[WDR-Firefox] Popup loaded, initializing...');
   document.querySelector('.version').textContent = 'v' + browserAPI.runtime.getManifest().version;
 
   try {
-    console.log('[WDR-Firefox] Initializing tabs...');
+    log('[WDR-Firefox] Initializing tabs...');
     initializeTabs();
 
-    console.log('[WDR-Firefox] Initializing tool buttons...');
+    log('[WDR-Firefox] Initializing tool buttons...');
     initializeToolButtons();
 
-    console.log('[WDR-Firefox] Initializing copy buttons...');
+    log('[WDR-Firefox] Initializing copy buttons...');
     initializeCopyButtons();
 
-    console.log('[WDR-Firefox] Initializing palettes...');
+    log('[WDR-Firefox] Initializing palettes...');
     initializePalettes();
     initializeContrast();
 
@@ -88,13 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    console.log('[WDR-Firefox] Loading stored data...');
+    log('[WDR-Firefox] Loading stored data...');
     loadStoredData();
 
-    console.log('[WDR-Firefox] Setting up message listener...');
+    log('[WDR-Firefox] Setting up message listener...');
     listenForMessages();
 
-    console.log('[WDR-Firefox] Initialization complete!');
+    log('[WDR-Firefox] Initialization complete!');
   } catch (error) {
     console.error('[WDR-Firefox] Initialization error:', error);
   }
@@ -150,11 +154,11 @@ function initializeToolButtons() {
   const fontBtn = document.getElementById('font-detector-btn');
   const measureBtn = document.getElementById('measure-tool-btn');
 
-  console.log('[WDR-Firefox] Found buttons:', { colorBtn, fontBtn, measureBtn });
+  log('[WDR-Firefox] Found buttons:', { colorBtn, fontBtn, measureBtn });
 
   if (colorBtn) {
     colorBtn.addEventListener('click', (e) => {
-      console.log('[WDR-Firefox] Color picker button clicked!', e);
+      log('[WDR-Firefox] Color picker button clicked!', e);
       activateTool('activateColorPicker', 'color picker');
     });
   } else {
@@ -163,7 +167,7 @@ function initializeToolButtons() {
 
   if (fontBtn) {
     fontBtn.addEventListener('click', (e) => {
-      console.log('[WDR-Firefox] Font detector button clicked!', e);
+      log('[WDR-Firefox] Font detector button clicked!', e);
       activateTool('activateFontDetector', 'font detector');
     });
   } else {
@@ -172,7 +176,7 @@ function initializeToolButtons() {
 
   if (measureBtn) {
     measureBtn.addEventListener('click', (e) => {
-      console.log('[WDR-Firefox] Measure tool button clicked!', e);
+      log('[WDR-Firefox] Measure tool button clicked!', e);
       activateTool('activateMeasureTool', 'measurement tool');
     });
   } else {
@@ -181,11 +185,11 @@ function initializeToolButtons() {
 }
 
 async function activateTool(action, toolName) {
-  console.log('[WDR-Firefox] Activating tool:', action);
+  log('[WDR-Firefox] Activating tool:', action);
 
   try {
     const response = await browserAPI.runtime.sendMessage({ action });
-    console.log('[WDR-Firefox] Tool activation response:', response);
+    log('[WDR-Firefox] Tool activation response:', response);
 
     if (response && response.success) {
       window.close();
@@ -754,7 +758,7 @@ function initializeCopyButtons() {
 
 function listenForMessages() {
   browserAPI.runtime.onMessage.addListener((message) => {
-    console.log('[WDR-Firefox] Popup received:', message);
+    log('[WDR-Firefox] Popup received:', message);
 
     if (message.action === 'colorPicked' && message.color) {
       displayPickedColor(message.color);

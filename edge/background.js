@@ -9,7 +9,11 @@
  * - chrome.runtime.lastError handling differences
  */
 
-console.log('[WDR-Edge] Background service worker started');
+let _debug = false;
+chrome.storage.local.get('settings', (data) => { _debug = (data.settings && data.settings.debugLogging) || false; });
+function log(...args) { if (_debug) console.log(...args); }
+
+log('[WDR-Edge] Background service worker started');
 
 // ============================================================================
 // CONSTANTS
@@ -46,14 +50,14 @@ function setupKeepAlive() {
   chrome.alarms.create(KEEP_ALIVE_ALARM_NAME, {
     periodInMinutes: WAKE_UP_INTERVAL_MINUTES
   });
-  console.log('[WDR-Edge] Wake-up alarm set');
+  log('[WDR-Edge] Wake-up alarm set');
 }
 
 // Handle alarm
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === KEEP_ALIVE_ALARM_NAME) {
     chrome.storage.local.get('_keepAlive', () => {
-      console.log('[WDR-Edge] Wake-up ping');
+      log('[WDR-Edge] Wake-up ping');
     });
   }
 });
@@ -68,7 +72,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
  */
 function createContextMenus() {
   if (menusCreated) {
-    console.log('[WDR-Edge] Menus already created, skipping');
+    log('[WDR-Edge] Menus already created, skipping');
     return;
   }
 
@@ -78,7 +82,7 @@ function createContextMenus() {
       // Check for errors silently
       const removeError = chrome.runtime.lastError;
       if (removeError) {
-        console.log('[WDR-Edge] removeAll note:', removeError.message);
+        log('[WDR-Edge] removeAll note:', removeError.message);
       }
 
       // Create new menus
@@ -97,7 +101,7 @@ function createContextMenus() {
               }
             } else if (index === MENU_ITEMS.length - 1) {
               menusCreated = true;
-              console.log('[WDR-Edge] Context menus created successfully');
+              log('[WDR-Edge] Context menus created successfully');
             }
           });
         } catch (e) {
@@ -142,7 +146,7 @@ function initializeStorage() {
         if (chrome.runtime.lastError) {
           console.error('[WDR-Edge] Storage set error:', chrome.runtime.lastError.message);
         } else {
-          console.log('[WDR-Edge] Storage initialized');
+          log('[WDR-Edge] Storage initialized');
         }
       });
     }
@@ -155,7 +159,7 @@ function initializeStorage() {
 
 // Install handler
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[WDR-Edge] Extension installed/updated:', details.reason);
+  log('[WDR-Edge] Extension installed/updated:', details.reason);
   menusCreated = false;  // Reset flag
   initializeStorage();
   createContextMenus();
@@ -164,7 +168,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Browser startup handler
 chrome.runtime.onStartup.addListener(() => {
-  console.log('[WDR-Edge] Browser startup detected');
+  log('[WDR-Edge] Browser startup detected');
   menusCreated = false;  // Reset flag on browser restart
   createContextMenus();
   setupKeepAlive();
@@ -172,7 +176,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 // Service worker started - create menus immediately
 // EDGE-SPECIFIC: This is crucial because Edge service workers restart frequently
-console.log('[WDR-Edge] Service worker script executing, initializing...');
+log('[WDR-Edge] Service worker script executing, initializing...');
 createContextMenus();
 setupKeepAlive();
 
@@ -196,7 +200,7 @@ function isValidUrl(url) {
 async function isContentScriptLoaded(tabId) {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
-      console.log('[WDR-Edge] Ping timed out');
+      log('[WDR-Edge] Ping timed out');
       resolve(false);
     }, PING_TIMEOUT_MS);
 
@@ -206,13 +210,13 @@ async function isContentScriptLoaded(tabId) {
 
         // EDGE-SPECIFIC: Must check lastError first
         if (chrome.runtime.lastError) {
-          console.log('[WDR-Edge] Ping error:', chrome.runtime.lastError.message);
+          log('[WDR-Edge] Ping error:', chrome.runtime.lastError.message);
           resolve(false);
           return;
         }
 
         const isLoaded = response && response.pong === true;
-        console.log('[WDR-Edge] Ping response:', isLoaded);
+        log('[WDR-Edge] Ping response:', isLoaded);
         resolve(isLoaded);
       });
     } catch (error) {
@@ -234,7 +238,7 @@ async function injectContentScript(tabId) {
       files: ['scripts/content-script.js'],
       world: 'ISOLATED'  // EDGE-SPECIFIC: Explicit world parameter
     });
-    console.log('[WDR-Edge] Content script injected');
+    log('[WDR-Edge] Content script injected');
     return true;
   } catch (error) {
     console.error('[WDR-Edge] Injection failed:', error.message);
@@ -250,13 +254,13 @@ async function ensureContentScript(tabId) {
   // First check if already loaded
   let isLoaded = await isContentScriptLoaded(tabId);
   if (isLoaded) {
-    console.log('[WDR-Edge] Content script already loaded');
+    log('[WDR-Edge] Content script already loaded');
     return { success: true };
   }
 
   // Try injection with retries
   for (let attempt = 1; attempt <= MAX_INJECTION_RETRIES; attempt++) {
-    console.log(`[WDR-Edge] Injection attempt ${attempt}/${MAX_INJECTION_RETRIES}`);
+    log(`[WDR-Edge] Injection attempt ${attempt}/${MAX_INJECTION_RETRIES}`);
 
     const injected = await injectContentScript(tabId);
     if (!injected) {
@@ -329,7 +333,7 @@ async function activateTool(actionType) {
           return;
         }
 
-        console.log('[WDR-Edge] Tool activated:', actionType);
+        log('[WDR-Edge] Tool activated:', actionType);
         resolve({ success: true });
       });
     });
@@ -346,7 +350,7 @@ async function activateTool(actionType) {
 
 // Context menu click handler
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  console.log('[WDR-Edge] Context menu clicked:', info.menuItemId);
+  log('[WDR-Edge] Context menu clicked:', info.menuItemId);
   const menuItem = MENU_ITEMS.find(item => item.id === info.menuItemId);
   if (menuItem) {
     activateTool(menuItem.action, tab);
@@ -355,7 +359,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Message handler
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[WDR-Edge] Message received:', message.action);
+  log('[WDR-Edge] Message received:', message.action);
 
   // Tool activation requests
   if (['activateColorPicker', 'activateFontDetector', 'activateMeasureTool'].includes(message.action)) {
@@ -421,7 +425,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Keyboard shortcuts
 chrome.commands.onCommand.addListener((command) => {
-  console.log('[WDR-Edge] Command received:', command);
+  log('[WDR-Edge] Command received:', command);
   if (command === 'activate_eyedropper') {
     activateTool('activateColorPicker');
   } else if (command === 'activate_font_detector') {
@@ -431,4 +435,4 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-console.log('[WDR-Edge] Background script initialization complete');
+log('[WDR-Edge] Background script initialization complete');

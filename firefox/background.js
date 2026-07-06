@@ -24,6 +24,10 @@ if (typeof browser !== 'undefined' && browser.runtime) {
   console.error('[WDR-Firefox] No browser API found!');
 }
 
+let _debug = false;
+try { browserAPI.storage.local.get('settings').then((data) => { _debug = (data.settings && data.settings.debugLogging) || false; }).catch(() => {}); } catch {}
+function log(...args) { if (_debug) console.log(...args); }
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -64,7 +68,7 @@ async function createContextMenus() {
         contexts: ['page', 'selection', 'image']
       });
     }
-    console.log('[WDR-Firefox] Context menus created');
+    log('[WDR-Firefox] Context menus created');
   } catch (error) {
     console.error('[WDR-Firefox] Menu creation error:', error);
   }
@@ -90,7 +94,7 @@ async function initializeStorage() {
 
     if (Object.keys(updates).length > 0) {
       await browserAPI.storage.local.set(updates);
-      console.log('[WDR-Firefox] Storage initialized');
+      log('[WDR-Firefox] Storage initialized');
     }
   } catch (error) {
     console.error('[WDR-Firefox] Storage init error:', error);
@@ -99,7 +103,7 @@ async function initializeStorage() {
 
 // Install handler
 browserAPI.runtime.onInstalled.addListener(async (details) => {
-  console.log('[WDR-Firefox] Extension installed:', details.reason);
+  log('[WDR-Firefox] Extension installed:', details.reason);
   await initializeStorage();
   await createContextMenus();
 });
@@ -152,7 +156,7 @@ async function injectContentScript(tabId) {
       target: { tabId: tabId },
       files: ['scripts/content-script.js']
     });
-    console.log('[WDR-Firefox] Content script injected');
+    log('[WDR-Firefox] Content script injected');
     return true;
   } catch (error) {
     console.error('[WDR-Firefox] Injection failed:', error);
@@ -170,7 +174,7 @@ async function ensureContentScript(tabId) {
   }
 
   for (let attempt = 1; attempt <= MAX_INJECTION_RETRIES; attempt++) {
-    console.log(`[WDR-Firefox] Injection attempt ${attempt}/${MAX_INJECTION_RETRIES}`);
+    log(`[WDR-Firefox] Injection attempt ${attempt}/${MAX_INJECTION_RETRIES}`);
 
     const injected = await injectContentScript(tabId);
     if (!injected) {
@@ -222,7 +226,7 @@ async function activateTool(actionType, tab = null) {
 
     try {
       await browserAPI.tabs.sendMessage(tab.id, { action: actionType });
-      console.log('[WDR-Firefox] Tool activated:', actionType);
+      log('[WDR-Firefox] Tool activated:', actionType);
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Failed to activate tool. Try refreshing.' };
@@ -240,7 +244,7 @@ async function activateTool(actionType, tab = null) {
 
 // Context menu clicks
 browserAPI.contextMenus.onClicked.addListener((info, tab) => {
-  console.log('[WDR-Firefox] Context menu clicked:', info.menuItemId);
+  log('[WDR-Firefox] Context menu clicked:', info.menuItemId);
   const menuItem = MENU_ITEMS.find(item => item.id === info.menuItemId);
   if (menuItem) {
     activateTool(menuItem.action, tab);
@@ -249,7 +253,7 @@ browserAPI.contextMenus.onClicked.addListener((info, tab) => {
 
 // Message handling - Firefox style with Promises
 browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[WDR-Firefox] Message received:', message.action);
+  log('[WDR-Firefox] Message received:', message.action);
 
   // Handle tool activation - use async handler pattern for Firefox
   if (['activateColorPicker', 'activateFontDetector', 'activateMeasureTool'].includes(message.action)) {
@@ -301,7 +305,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Keyboard shortcuts
 browserAPI.commands.onCommand.addListener((command) => {
-  console.log('[WDR-Firefox] Command received:', command);
+  log('[WDR-Firefox] Command received:', command);
   if (command === 'activate_eyedropper') {
     activateTool('activateColorPicker');
   } else if (command === 'activate_font_detector') {
@@ -311,4 +315,4 @@ browserAPI.commands.onCommand.addListener((command) => {
   }
 });
 
-console.log('[WDR-Firefox] Background script initialization complete');
+log('[WDR-Firefox] Background script initialization complete');

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="options.css">
+  <title>Web Design Ruler Options</title>
+</head>
+<body>
+  <header class="header">
+    <h1>Options</h1>
+  </header>
+  <main>
+    <div class="option-row">
+      <label for="use-eyedropper">
+        <input type="checkbox" id="use-eyedropper">
+        Use native EyeDropper (Chrome/Edge)
+      </label>
+      <p class="option-desc">When enabled, the color picker uses the browser's native EyeDropper API for screen-wide color picking. Falls back to the in-page panel otherwise.</p>
+    </div>
+    <div class="option-row">
+      <label for="debug-logging">
+        <input type="checkbox" id="debug-logging">
+        Debug logging
+      </label>
+      <p class="option-desc">Show verbose console logs for troubleshooting.</p>
+    </div>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>
