@@ -260,19 +260,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       const color = result.sRGBHex.toUpperCase();
       console.log('[WDR] Color picked via EyeDropper:', color);
 
-      // Save color
-      chrome.storage.local.set({ lastPickedColor: color });
-
-      // Update recent colors
-      chrome.storage.local.get('recentColors', (data) => {
-        const recentColors = data.recentColors || [];
-        if (!recentColors.includes(color)) {
-          recentColors.unshift(color);
-          chrome.storage.local.set({ recentColors: recentColors.slice(0, 20) });
-        }
-      });
-
-      // Notify background script
+      // Notify background script (single-writer: background handles storage)
       chrome.runtime.sendMessage({
         action: 'colorPicked',
         color: color
@@ -446,20 +434,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     function selectColor(selectedColor, colorLabel) {
       console.log('[WDR] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
 
-      // Save color
-      chrome.storage.local.set({ lastPickedColor: selectedColor });
-
-      // Update recent colors
-      chrome.storage.local.get('recentColors', (data) => {
-        if (chrome.runtime.lastError) return;
-        const recentColors = data.recentColors || [];
-        if (!recentColors.includes(selectedColor)) {
-          recentColors.unshift(selectedColor);
-          chrome.storage.local.set({ recentColors: recentColors.slice(0, 20) });
-        }
-      });
-
-      // Notify background script
+      // Notify background script (single-writer: background handles storage)
       chrome.runtime.sendMessage({
         action: 'colorPicked',
         color: selectedColor
@@ -757,7 +732,6 @@ color: ${rgbToHex(style.color)};`
       const details = getFontDetails(highlightedElement);
       console.log('[WDR] Font detected:', details);
 
-      chrome.storage.local.set({ lastDetectedFont: details });
       chrome.runtime.sendMessage({ action: 'fontDetected', fontDetails: details });
 
       // Copy CSS to clipboard
@@ -967,7 +941,6 @@ color: ${rgbToHex(style.color)};`
 
       console.log('[WDR] Measurement taken:', measurements);
 
-      chrome.storage.local.set({ lastMeasurement: measurements });
       chrome.runtime.sendMessage({ action: 'measurementTaken', measurements });
 
       panel.innerHTML = `

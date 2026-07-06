@@ -334,17 +334,6 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     function selectColor(selectedColor, colorLabel) {
       console.log('[WDR-Firefox] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
 
-      browserAPI.storage.local.set({ lastPickedColor: selectedColor });
-
-      // Update recent colors
-      browserAPI.storage.local.get('recentColors').then(data => {
-        const recentColors = data.recentColors || [];
-        if (!recentColors.includes(selectedColor)) {
-          recentColors.unshift(selectedColor);
-          browserAPI.storage.local.set({ recentColors: recentColors.slice(0, 20) });
-        }
-      }).catch(() => {});
-
       browserAPI.runtime.sendMessage({ action: 'colorPicked', color: selectedColor });
 
       // Show confirmation
@@ -614,7 +603,6 @@ color: ${rgbToHex(style.color)};`
       e.stopPropagation();
 
       const details = getFontDetails(highlightedElement);
-      browserAPI.storage.local.set({ lastDetectedFont: details });
       browserAPI.runtime.sendMessage({ action: 'fontDetected', fontDetails: details });
 
       copyToClipboard(details.css);
@@ -813,7 +801,6 @@ color: ${rgbToHex(style.color)};`
         diagonal: Math.round(Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)))
       };
 
-      browserAPI.storage.local.set({ lastMeasurement: measurements });
       browserAPI.runtime.sendMessage({ action: 'measurementTaken', measurements });
 
       panel.innerHTML = `
