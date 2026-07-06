@@ -310,15 +310,10 @@ async function ensureContentScript(tabId) {
 // TOOL ACTIVATION
 // ============================================================================
 
-async function activateTool(actionType) {
+async function activateTool(actionType, tab = null) {
   try {
     if (!tab) {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-
-      if (chrome.runtime.lastError) {
-        console.error('[WDR-Edge] Tab query error:', chrome.runtime.lastError.message);
-        return { success: false, error: 'Failed to get active tab' };
-      }
 
       if (!tabs || tabs.length === 0) {
         return { success: false, error: 'No active tab found' };
