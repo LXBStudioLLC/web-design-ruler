@@ -26,6 +26,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     overlayLight: 'rgba(37, 99, 235, 0.1)'
   };
 
+  let activeToolCleanup = null;
+
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
@@ -332,6 +334,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   function activateColorPickerFallback() {
     console.log('[WDR] Activating color picker (fallback mode with image support)');
 
+    if (activeToolCleanup) activeToolCleanup();
+
     // Store original body styles
     const originalCursor = document.body.style.cursor;
     const originalUserSelect = document.body.style.userSelect;
@@ -522,6 +526,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function cleanup() {
       if (!isActive) return;
+      activeToolCleanup = null;
       isActive = false;
 
       document.removeEventListener('mousemove', onMouseMove, true);
@@ -537,6 +542,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
       console.log('[WDR] Color picker cleanup complete');
     }
+
+    activeToolCleanup = cleanup;
 
     // Use capture phase to ensure we get the events first
     document.addEventListener('mousemove', onMouseMove, true);
@@ -561,6 +568,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
   function activateFontDetector() {
     console.log('[WDR] Activating font detector');
+
+    if (activeToolCleanup) activeToolCleanup();
 
     const originalCursor = document.body.style.cursor;
     const originalUserSelect = document.body.style.userSelect;
@@ -773,6 +782,7 @@ color: ${rgbToHex(style.color)};`
 
     function cleanup() {
       if (!isActive) return;
+      activeToolCleanup = null;
       isActive = false;
 
       document.removeEventListener('mousemove', onMouseMove, true);
@@ -788,6 +798,8 @@ color: ${rgbToHex(style.color)};`
       console.log('[WDR] Font detector cleanup complete');
     }
 
+    activeToolCleanup = cleanup;
+
     document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('click', onClick, true);
     document.addEventListener('keydown', onKeyDown, true);
@@ -799,6 +811,8 @@ color: ${rgbToHex(style.color)};`
 
   function activateMeasureTool() {
     console.log('[WDR] Activating measurement tool');
+
+    if (activeToolCleanup) activeToolCleanup();
 
     const originalCursor = document.body.style.cursor;
     const originalUserSelect = document.body.style.userSelect;
@@ -977,6 +991,7 @@ color: ${rgbToHex(style.color)};`
 
     function cleanup() {
       if (!isActive) return;
+      activeToolCleanup = null;
       isActive = false;
 
       overlay.removeEventListener('mousedown', onMouseDown);
@@ -993,6 +1008,8 @@ color: ${rgbToHex(style.color)};`
 
       console.log('[WDR] Measurement tool cleanup complete');
     }
+
+    activeToolCleanup = cleanup;
 
     overlay.addEventListener('mousedown', onMouseDown);
     overlay.addEventListener('mousemove', onMouseMove);

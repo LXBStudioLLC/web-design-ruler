@@ -35,6 +35,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     overlayLight: 'rgba(37, 99, 235, 0.1)'
   };
 
+  let activeToolCleanup = null;
+
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
@@ -224,6 +226,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   function activateColorPicker() {
     console.log('[WDR-Firefox] Activating color picker with image support and dual color detection');
 
+    if (activeToolCleanup) activeToolCleanup();
+
     const originalCursor = document.body.style.cursor;
     const originalUserSelect = document.body.style.userSelect;
     document.body.style.cursor = 'crosshair';
@@ -401,6 +405,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function cleanup() {
       if (!isActive) return;
+      activeToolCleanup = null;
       isActive = false;
 
       document.removeEventListener('mousemove', onMouseMove, true);
@@ -413,6 +418,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       if (panel.parentNode) panel.remove();
     }
 
+    activeToolCleanup = cleanup;
+
     document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('click', onClick, true);
     document.addEventListener('keydown', onKeyDown, true);
@@ -424,6 +431,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
   function activateFontDetector() {
     console.log('[WDR-Firefox] Activating font detector');
+
+    if (activeToolCleanup) activeToolCleanup();
 
     const originalCursor = document.body.style.cursor;
     const originalUserSelect = document.body.style.userSelect;
@@ -627,6 +636,7 @@ color: ${rgbToHex(style.color)};`
 
     function cleanup() {
       if (!isActive) return;
+      activeToolCleanup = null;
       isActive = false;
 
       document.removeEventListener('mousemove', onMouseMove, true);
@@ -640,6 +650,8 @@ color: ${rgbToHex(style.color)};`
       if (highlightBox) highlightBox.remove();
     }
 
+    activeToolCleanup = cleanup;
+
     document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('click', onClick, true);
     document.addEventListener('keydown', onKeyDown, true);
@@ -651,6 +663,8 @@ color: ${rgbToHex(style.color)};`
 
   function activateMeasureTool() {
     console.log('[WDR-Firefox] Activating measurement tool');
+
+    if (activeToolCleanup) activeToolCleanup();
 
     const originalCursor = document.body.style.cursor;
     const originalUserSelect = document.body.style.userSelect;
@@ -819,6 +833,7 @@ color: ${rgbToHex(style.color)};`
 
     function cleanup() {
       if (!isActive) return;
+      activeToolCleanup = null;
       isActive = false;
 
       overlay.removeEventListener('mousedown', onMouseDown);
@@ -833,6 +848,8 @@ color: ${rgbToHex(style.color)};`
         if (el && el.parentNode) el.remove();
       });
     }
+
+    activeToolCleanup = cleanup;
 
     overlay.addEventListener('mousedown', onMouseDown);
     overlay.addEventListener('mousemove', onMouseMove);
