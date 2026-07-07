@@ -270,6 +270,9 @@ async function ensureContentScript(tabId) {
 
     const injected = await injectContentScript(tabId);
     if (!injected) {
+      // Give a mid-navigation tab a moment to settle before retrying
+      // (matches the edge build's retry behavior).
+      await new Promise(resolve => setTimeout(resolve, INJECTION_RETRY_DELAY_MS));
       continue;
     }
 
