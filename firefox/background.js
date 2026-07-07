@@ -97,6 +97,27 @@ browserAPI.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === 'loading') clearBadgeIfOwner(tabId);
 });
 
+// Surface activation failures from badge-only entry points: the popup shows
+// activateTool errors itself, but context-menu and keyboard-shortcut users
+// otherwise get a silent no-op (restricted pages, injection failures).
+const DEFAULT_ACTION_TITLE = 'Web Design Ruler';
+
+function flashErrorBadge(errorText) {
+  if (badgeClearTimer) clearTimeout(badgeClearTimer);
+  browserAPI.action.setBadgeBackgroundColor({ color: '#EF4444' });
+  browserAPI.action.setBadgeText({ text: '!' });
+  browserAPI.action.setTitle({ title: DEFAULT_ACTION_TITLE + ' \u2014 ' + (errorText || 'Tool activation failed') });
+  badgeClearTimer = setTimeout(() => {
+    setBadge(''); // also restores the normal badge color
+    browserAPI.action.setTitle({ title: DEFAULT_ACTION_TITLE });
+    badgeClearTimer = null;
+  }, 3000);
+}
+
+function surfaceActivationResult(result) {
+  if (result && !result.success) flashErrorBadge(result.error);
+}
+
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -303,7 +324,7 @@ browserAPI.contextMenus.onClicked.addListener((info, tab) => {
   log('[WDR-Firefox] Context menu clicked:', info.menuItemId);
   const menuItem = MENU_ITEMS.find(item => item.id === info.menuItemId);
   if (menuItem) {
-    activateTool(menuItem.action, tab);
+    activateTool(menuItem.action, tab).then(surfaceActivationResult);
   }
 });
 
@@ -409,11 +430,11 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
 browserAPI.commands.onCommand.addListener((command) => {
   log('[WDR-Firefox] Command received:', command);
   if (command === 'activate_eyedropper') {
-    activateTool('activateColorPicker');
+    activateTool('activateColorPicker').then(surfaceActivationResult);
   } else if (command === 'activate_font_detector') {
-    activateTool('activateFontDetector');
+    activateTool('activateFontDetector').then(surfaceActivationResult);
   } else if (command === 'activate_measure_tool') {
-    activateTool('activateMeasureTool');
+    activateTool('activateMeasureTool').then(surfaceActivationResult);
   }
 });
 
