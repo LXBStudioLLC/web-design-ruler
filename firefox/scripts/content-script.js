@@ -164,6 +164,9 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     let pickerCanvas = null;
     let pickerCanvasEl = null;
     let pickerCanvasKey = null;
+    // Media elements whose pixels we cannot read (cross-origin taint):
+    // remembered so we don't re-probe and re-warn on every mousemove.
+    const taintedMedia = new WeakSet();
 
     // Create display panel
     const panel = createElement('div', {
@@ -231,13 +234,80 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function sampleMediaPixel(element, relX, relY) {
       try {
-        const backingW = element.tagName === 'IMG' ? (element.naturalWidth || element.width)
-          : element.tagName === 'CANVAS' ? element.width
-          : (element.videoWidth || element.clientWidth);
-        const backingH = element.tagName === 'IMG' ? (element.naturalHeight || element.height)
-          : element.tagName === 'CANVAS' ? element.height
-          : (element.videoHeight || element.clientHeight);
+        if (taintedMedia.has(element)) return null;
+
+        // Backing (natural) pixel dimensions. Bail while the media is not
+        // ready: an undecoded IMG or a VIDEO without a decoded frame draws
+        // nothing, and getImageData would report transparent black as #000000.
+        let backingW = 0, backingH = 0;
+        if (element.tagName === 'IMG') {
+          if (!element.complete || !(element.naturalWidth > 0)) return null;
+          backingW = element.naturalWidth;
+          backingH = element.naturalHeight;
+        } else if (element.tagName === 'CANVAS') {
+          backingW = element.width;
+          backingH = element.height;
+        } else { // VIDEO
+          if (element.readyState < 2 || !(element.videoWidth > 0)) return null;
+          backingW = element.videoWidth;
+          backingH = element.videoHeight;
+        }
         if (!backingW || !backingH) return null;
+
+        const cs = window.getComputedStyle(element);
+        const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+        const borderTop = parseFloat(cs.borderTopWidth) || 0;
+        const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+        const paddingTop = parseFloat(cs.paddingTop) || 0;
+        const paddingRight = parseFloat(cs.paddingRight) || 0;
+        const paddingBottom = parseFloat(cs.paddingBottom) || 0;
+
+        // Content box: clientWidth/Height include padding but not borders.
+        const contentW = element.clientWidth - paddingLeft - paddingRight;
+        const contentH = element.clientHeight - paddingTop - paddingBottom;
+        if (contentW <= 0 || contentH <= 0) return null;
+
+        // Cursor position within the content box; padding/border strips show
+        // background rather than media pixels.
+        const contentX = relX - borderLeft - paddingLeft;
+        const contentY = relY - borderTop - paddingTop;
+        if (contentX < 0 || contentY < 0 || contentX >= contentW || contentY >= contentH) return null;
+
+        // Rectangle the media is actually drawn into (object-fit), using the
+        // backing dimensions as the natural size.
+        let fit = cs.objectFit || 'fill';
+        if (fit === 'scale-down') {
+          fit = (backingW <= contentW && backingH <= contentH) ? 'none' : 'contain';
+        }
+        let drawnW, drawnH;
+        if (fit === 'contain' || fit === 'cover') {
+          const s = fit === 'contain'
+            ? Math.min(contentW / backingW, contentH / backingH)
+            : Math.max(contentW / backingW, contentH / backingH);
+          drawnW = backingW * s;
+          drawnH = backingH * s;
+        } else if (fit === 'none') {
+          drawnW = backingW;
+          drawnH = backingH;
+        } else { // fill (and anything unrecognized)
+          drawnW = contentW;
+          drawnH = contentH;
+        }
+
+        // Computed object-position resolves to two lengths/percentages:
+        // percentages distribute the leftover space, px values are offsets.
+        const posParts = (cs.objectPosition || '50% 50%').split(/\s+/);
+        const offsetFor = (part, leftover) => {
+          if (!part) return leftover / 2;
+          return part.endsWith('%') ? (parseFloat(part) / 100) * leftover : (parseFloat(part) || 0);
+        };
+        const drawnX = offsetFor(posParts[0], contentW - drawnW);
+        const drawnY = offsetFor(posParts[1], contentH - drawnH);
+
+        // Outside the drawn media (contain/none letterboxing) the element's
+        // background shows through — let the caller fall back to it.
+        if (contentX < drawnX || contentY < drawnY || contentX >= drawnX + drawnW || contentY >= drawnY + drawnH) return null;
+
         const srcKey = element.tagName === 'IMG' ? (element.currentSrc || element.src || '') : '';
         const key = element.clientWidth + 'x' + element.clientHeight + '_' + backingW + 'x' + backingH + '_' + srcKey;
         // Cache is valid only for the SAME element with unchanged dimensions/source;
@@ -250,28 +320,23 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
           pickerCanvasEl = element;
           pickerCanvasKey = key;
         } else if (element.tagName !== 'IMG') {
-          pickerCanvas.getContext('2d').drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
+          const redrawCtx = pickerCanvas.getContext('2d');
+          // Clear first: an animated canvas with transparent regions would
+          // otherwise blend the previous frame into this sample.
+          redrawCtx.clearRect(0, 0, pickerCanvas.width, pickerCanvas.height);
+          redrawCtx.drawImage(element, 0, 0, pickerCanvas.width, pickerCanvas.height);
         }
 
         const ctx = pickerCanvas.getContext('2d');
-        const cs = window.getComputedStyle(element);
-        const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
-        const borderTop = parseFloat(cs.borderTopWidth) || 0;
-        const paddingLeft = parseFloat(cs.paddingLeft) || 0;
-        const paddingTop = parseFloat(cs.paddingTop) || 0;
-        const contentX = relX - borderLeft - paddingLeft;
-        const contentY = relY - borderTop - paddingTop;
-        if (element.clientWidth === 0 || element.clientHeight === 0) return null;
-        const scaleX = pickerCanvas.width / element.clientWidth;
-        const scaleY = pickerCanvas.height / element.clientHeight;
-        const scaledX = Math.floor(contentX * scaleX);
-        const scaledY = Math.floor(contentY * scaleY);
-        const pixel = ctx.getImageData(scaledX, scaledY, 1, 1).data;
+        const sx = Math.min(backingW - 1, Math.max(0, Math.floor((contentX - drawnX) * (backingW / drawnW))));
+        const sy = Math.min(backingH - 1, Math.max(0, Math.floor((contentY - drawnY) * (backingH / drawnH))));
+        const pixel = ctx.getImageData(sx, sy, 1, 1).data;
         return '#' + [pixel[0], pixel[1], pixel[2]].map(v => {
           const hex = v.toString(16);
           return hex.length === 1 ? '0' + hex : hex;
         }).join('').toUpperCase();
       } catch (error) {
+        taintedMedia.add(element);
         console.warn('[WDR-Firefox] Cannot read media pixels (likely cross-origin):', error.message);
         return null;
       }
