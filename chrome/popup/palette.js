@@ -122,12 +122,6 @@ function removeFromPalette(paletteName, color, callback) {
  * @param {string} paletteName - Name of palette
  * @param {Function} callback - Callback with palette array or null
  */
-function getPalette(paletteName, callback) {
-  chrome.storage.local.get('palettes', ({ palettes = {} }) => {
-    callback(palettes[paletteName] || null);
-  });
-}
-
 function validatePaletteColors(colors) {
   if (!Array.isArray(colors) || colors.length > 200) return null;
   const validated = [];

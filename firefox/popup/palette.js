@@ -116,16 +116,6 @@ async function removeFromPalette(paletteName, color, callback) {
   }
 }
 
-async function getPalette(paletteName, callback) {
-  try {
-    const { palettes = {} } = await browserAPI.storage.local.get('palettes');
-    callback(palettes[paletteName] || null);
-  } catch (error) {
-    console.error('[WDR-Firefox] getPalette error:', error);
-    callback(null);
-  }
-}
-
 function validatePaletteColors(colors) {
   if (!Array.isArray(colors) || colors.length > 200) return null;
   const validated = [];
