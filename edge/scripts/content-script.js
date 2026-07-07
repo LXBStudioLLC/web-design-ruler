@@ -1128,6 +1128,7 @@ color: ${rgbToHex(style.color)};`
 
     function onMouseDown(e) {
       if (!isActive) return;
+      if (e.button !== 0) return; // left button only: a right-click must not start (or commit) a measurement
       shiftHeld = e.shiftKey;
       isDrawing = true;
       let x = e.clientX;
@@ -1164,6 +1165,7 @@ color: ${rgbToHex(style.color)};`
 
     function onMouseUp(e) {
       if (!isActive || !isDrawing) return;
+      if (e.button !== 0) return; // releases of other buttons don't end the drag
 
       isDrawing = false;
       shiftHeld = e.shiftKey;
@@ -1214,6 +1216,15 @@ color: ${rgbToHex(style.color)};`
       if (e.key === 'Shift') { shiftHeld = false; }
     }
 
+    // Swallow the native context menu while measuring (capture phase so the
+    // page never sees it); the guard above already keeps right-clicks from
+    // becoming measurements.
+    function onContextMenu(e) {
+      if (!isActive) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     function cleanup(reason) {
       if (!isActive) return;
       if (rafId) cancelAnimationFrame(rafId);
@@ -1227,6 +1238,7 @@ color: ${rgbToHex(style.color)};`
       overlay.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('mouseup', onMouseUp);
       document.documentElement.removeEventListener('mouseleave', onMouseLeave);
+      document.removeEventListener('contextmenu', onContextMenu, true);
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('keyup', onKeyUp, true);
 
@@ -1251,6 +1263,7 @@ color: ${rgbToHex(style.color)};`
       onMouseUp(e);
     }
     document.documentElement.addEventListener('mouseleave', onMouseLeave);
+    document.addEventListener('contextmenu', onContextMenu, true);
     document.addEventListener('keydown', onKeyDown, true);
     document.addEventListener('keyup', onKeyUp, true);
   }
