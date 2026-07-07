@@ -542,7 +542,11 @@ function initializePalettes() {
       reader.onload = (event) => {
         try {
           const data = JSON.parse(event.target.result);
-          if (!data.name || typeof data.name !== 'string') {
+          // Trim and cap like the create-palette input (maxlength=40); a
+          // whitespace-only name would collide with the selector placeholder
+          // and create an unviewable, undeletable palette.
+          const importName = (typeof data.name === 'string' ? data.name : '').trim().slice(0, 40);
+          if (!importName) {
             showNotification('Invalid palette file', 'error');
             return;
           }
@@ -552,16 +556,22 @@ function initializePalettes() {
             return;
           }
           loadPalettes((palettes) => {
-            let finalName = data.name.trim();
+            let finalName = importName;
             if (palettes[finalName]) {
               let i = 2;
               while (palettes[`${finalName} (${i})`]) i++;
               finalName = `${finalName} (${i})`;
             }
-            createPalette(finalName, validatedColors, () => {
+            createPalette(finalName, validatedColors, (success, reason) => {
+              if (!success) {
+                // A concurrent writer can take the name between our read and
+                // this write, and storage itself can fail — don't claim success.
+                showNotification(reason === 'exists' ? 'A palette with that name already exists' : 'Error importing palette', 'error');
+                return;
+              }
               loadPalettes(updatePaletteDisplay);
               showNotification(
-                finalName === data.name.trim() ? 'Palette imported!' : `Imported as "${finalName}"`,
+                finalName === importName ? 'Palette imported!' : `Imported as "${finalName}"`,
                 'success'
               );
             });
