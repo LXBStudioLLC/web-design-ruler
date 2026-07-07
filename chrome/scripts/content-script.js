@@ -172,6 +172,10 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   async function activateColorPickerEyeDropper() {
     log('[WDR] Activating color picker with EyeDropper API');
 
+    // Mutual exclusion with the fallback tools: without this, the native
+    // dropper can stack on top of an active measure/font/picker session.
+    if (activeToolCleanup) activeToolCleanup();
+
     try {
       const eyeDropper = new EyeDropper();
       const result = await eyeDropper.open();
@@ -194,8 +198,15 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     } catch (error) {
       if (error.name === 'AbortError') {
         log('[WDR] EyeDropper cancelled by user');
+        // The background set the ● badge on activation; without this it
+        // stays lit forever after the user cancels the native dropper.
+        safeSend({ action: 'toolCancelled' });
       } else {
         console.error('[WDR] EyeDropper error:', error);
+        safeSend({ action: 'toolCancelled' });
+        // The native dropper failed to open (e.g. no transient user
+        // activation) — give the user the in-page picker instead.
+        activateColorPickerFallback();
       }
     }
   }
