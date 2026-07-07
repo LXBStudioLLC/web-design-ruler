@@ -382,10 +382,12 @@ references are historical.
 - Manual smoke matrix (Section 3.8) in real browsers before upload.
 - AMO `data_collection_permissions` manifest field before AMO upload.
 - `host_permissions` vs store copy — reserved owner decision.
-- **Store screenshots**: `screenshots/` and the parent `IMAGES/` all
-  predate the v2.1/v2.2 UI (tabbed popup, dark mode, options page,
-  contrast checker, saved fonts, measure area) — re-capture before the
-  CWS/Edge/AMO uploads.
+- **Store screenshots — RESOLVED 2026-07-07**: a designed asset set
+  (5 screenshots at 1280×800 + 440×280 and 1400×560 promo tiles, 24-bit
+  PNG no-alpha) now lives in the parent folder's `store-assets/`
+  (source: `promo/source/src/store/StoreAssets.tsx`, rendered via
+  Remotion stills). The old `screenshots/` + `IMAGES/` sets are
+  superseded.
 - `docs/assets/social-preview.png` artwork freshness unverified against
   current branding.
 - CoC contact `LXBStudioLLC@gmail.com` (deliberate correction in
