@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (data.lastDetectedFont) {
         const fw = String(data.lastDetectedFont.fontWeight).split(' ')[0];
-        snippet += `font-family: ${data.lastDetectedFont.fontFamilyStack};\n`;
+        snippet += `font-family: ${data.lastDetectedFont.fontFamilyStack || data.lastDetectedFont.fontFamily};\n`;
         snippet += `font-size: ${data.lastDetectedFont.fontSize};  font-weight: ${fw};  line-height: ${data.lastDetectedFont.lineHeight};\n`;
         hasData = true;
       }
@@ -293,6 +293,11 @@ function displayFontDetails(fontDetails) {
 
   // Setup buttons
   document.getElementById('copy-font-css').onclick = () => {
+    if (!fontDetails.css) {
+      // Legacy v1.x records have no css field; copying would paste 'undefined'
+      showNotification('No CSS stored for this font', 'warning');
+      return;
+    }
     copyToClipboard(fontDetails.css);
     showNotification('CSS copied to clipboard!', 'success');
   };
@@ -776,9 +781,12 @@ function initializeCopyButtons() {
         case 'diagonal':
           value = document.getElementById('measure-diagonal').value + 'px';
           break;
-        case 'area':
-          value = document.getElementById('measure-area').value + 'px\u00B2';
+        case 'area': {
+          // Legacy measurements may have no area; don't copy a bare unit
+          const area = document.getElementById('measure-area').value;
+          value = area ? area + 'px\u00B2' : '';
           break;
+        }
       }
 
       if (value) {
