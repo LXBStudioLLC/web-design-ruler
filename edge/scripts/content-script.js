@@ -189,11 +189,9 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
         color: color
       });
 
-      // Copy to clipboard
-      await copyToClipboard(color);
-
-      // Show brief confirmation toast
-      showColorPickedToast(color);
+      // Copy to clipboard; the toast reports the actual result
+      const copied = await copyToClipboard(color);
+      showColorPickedToast(color, copied);
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -215,7 +213,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
    * Show a brief toast notification for picked color
    * @param {string} color - HEX color
    */
-  function showColorPickedToast(color) {
+  function showColorPickedToast(color, copied) {
     const toast = createElement('div', {
       position: 'fixed',
       bottom: '20px',
@@ -233,11 +231,11 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       alignItems: 'center',
       gap: '12px'
     });
-    const checkSpan = createElement('span', { color: COLORS.success, fontSize: '20px' });
-    checkSpan.textContent = '\u2713';
+    const checkSpan = createElement('span', { color: copied ? COLORS.success : '#F59E0B', fontSize: '20px' });
+    checkSpan.textContent = copied ? '\u2713' : '\u26A0';
     const swatchSpan = createElement('span', { display: 'inline-block', width: '24px', height: '24px', backgroundColor: color, border: '2px solid white', borderRadius: '4px' });
     const labelSpan = createElement('span', {});
-    labelSpan.textContent = 'Copied: ' + color;
+    labelSpan.textContent = (copied ? 'Copied: ' : 'Picked (clipboard copy failed): ') + color;
     toast.replaceChildren(checkSpan, swatchSpan, labelSpan);
     document.body.appendChild(toast);
 
@@ -520,15 +518,14 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
         color: selectedColor
       });
 
-      // Show confirmation
-      const confirmCheck = createElement('span', { color: COLORS.success, fontSize: '20px' });
-      confirmCheck.textContent = '\u2713';
-      const confirmText = createElement('span', {});
-      confirmText.textContent = 'Copied ' + colorLabel + ': ' + selectedColor;
-      panel.replaceChildren(confirmCheck, confirmText);
-
-      // Copy to clipboard
-      copyToClipboard(selectedColor);
+      // Copy to clipboard, then show a confirmation that reflects the result
+      copyToClipboard(selectedColor).then((copied) => {
+        const confirmCheck = createElement('span', { color: copied ? COLORS.success : '#F59E0B', fontSize: '20px' });
+        confirmCheck.textContent = copied ? '\u2713' : '\u26A0';
+        const confirmText = createElement('span', {});
+        confirmText.textContent = (copied ? 'Copied ' : 'Copy failed \u2014 picked ') + colorLabel + ': ' + selectedColor;
+        panel.replaceChildren(confirmCheck, confirmText);
+      });
 
       setTimeout(cleanup, 1000);
     }
@@ -907,16 +904,16 @@ color: ${rgbToHex(style.color)};`
 
       safeSend({ action: 'fontDetected', fontDetails: details });
 
-      // Copy CSS to clipboard
-      copyToClipboard(details.css);
-
+      // Copy CSS to clipboard; the sub-line reports the actual result
       const fontConfirmWrap = createElement('div', { textAlign: 'center', padding: '20px' });
       const fontConfirmCheck = createElement('div', { color: COLORS.success, fontSize: '28px' });
       fontConfirmCheck.textContent = '\u2713';
       const fontConfirmTitle = createElement('div', { fontWeight: '600', marginTop: '8px' });
       fontConfirmTitle.textContent = 'Font Selected!';
       const fontConfirmSub = createElement('div', { color: '#9CA3AF', fontSize: '12px', marginTop: '4px' });
-      fontConfirmSub.textContent = 'CSS copied to clipboard';
+      copyToClipboard(details.css).then((copied) => {
+        fontConfirmSub.textContent = copied ? 'CSS copied to clipboard' : 'Clipboard copy failed \u2014 font saved';
+      });
       fontConfirmWrap.replaceChildren(fontConfirmCheck, fontConfirmTitle, fontConfirmSub);
       panel.replaceChildren(fontConfirmWrap);
 
@@ -1284,7 +1281,7 @@ color: ${rgbToHex(style.color)};`
   // produced false-positive "colors" the background then rejected.
   const COLOR_TOKEN_RE = /rgba?\([^)]+\)/g;
 
-  function showCollectionToast(count) {
+  function showCollectionToast(count, copied) {
     const toast = createElement('div', {
       position: 'fixed',
       bottom: '20px',
@@ -1302,10 +1299,12 @@ color: ${rgbToHex(style.color)};`
       alignItems: 'center',
       gap: '12px'
     });
-    const checkSpan = createElement('span', { color: COLORS.success, fontSize: '20px' });
-    checkSpan.textContent = '\u2713';
+    const checkSpan = createElement('span', { color: copied ? COLORS.success : '#F59E0B', fontSize: '20px' });
+    checkSpan.textContent = copied ? '\u2713' : '\u26A0';
     const labelSpan = createElement('span', {});
-    labelSpan.textContent = 'Copied ' + count + ' colors as CSS custom properties';
+    labelSpan.textContent = copied
+      ? 'Copied ' + count + ' colors as CSS custom properties'
+      : 'Clipboard copy failed \u2014 ' + count + ' colors saved to palette';
     toast.replaceChildren(checkSpan, labelSpan);
     document.body.appendChild(toast);
 
@@ -1365,9 +1364,9 @@ color: ${rgbToHex(style.color)};`
     const result = Array.from(colors).slice(0, MAX_COLORS);
 
     const cssText = result.map((c, i) => '--color-' + (i + 1) + ': ' + c + ';').join('\n');
-    await copyToClipboard(cssText);
+    const copied = await copyToClipboard(cssText);
 
-    showCollectionToast(result.length);
+    showCollectionToast(result.length, copied);
 
     safeSend({
       action: 'pageColorsCollected',
