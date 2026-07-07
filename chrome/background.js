@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler Background Script (Chrome Build)
- * Version: 2.0.0
+ * Version: 2.2.0
  *
  * Handles service worker lifecycle, message passing, and tool activation
  * with robust error handling and cross-browser compatibility.

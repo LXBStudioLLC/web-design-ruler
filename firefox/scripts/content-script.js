@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler Content Script (Firefox Build)
- * Version: 2.0.0
+ * Version: 2.2.0
  *
  * FIREFOX-SPECIFIC: Uses browser.* namespace where available
  * Includes enhanced color picker with image/canvas/video support

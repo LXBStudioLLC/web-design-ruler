@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler Content Script (Chrome Build)
- * Version: 2.0.0
+ * Version: 2.2.0
  *
  * Provides color picking, font detection, and measurement tools
  * with proper cleanup, error handling, and duplicate injection protection.

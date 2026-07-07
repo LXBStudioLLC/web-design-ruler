@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler - Popup Script
- * Version: 2.0.0
+ * Version: 2.2.0
  *
  * Handles popup UI interactions and communication with background script
  */

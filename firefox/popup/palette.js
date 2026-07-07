@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler - Palette Management (Firefox Build)
- * Version: 2.0.0
+ * Version: 2.2.0
  *
  * Uses browser.* namespace with Promises for Firefox
  * This file loads BEFORE popup.js, so we define browserAPI here

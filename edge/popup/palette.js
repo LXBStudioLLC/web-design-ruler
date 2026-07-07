@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler - Palette Management
- * Version: 2.0.0
+ * Version: 2.2.0
  *
  * Provides functions to manage color palettes in Chrome storage
  */

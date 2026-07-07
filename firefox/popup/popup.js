@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler - Popup Script (Firefox Build)
- * Version: 2.0.0
+ * Version: 2.2.0
  *
  * Uses browser.* namespace with Promises for Firefox
  * Note: browserAPI is defined in palette.js which loads first
