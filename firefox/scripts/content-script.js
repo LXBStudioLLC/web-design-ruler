@@ -1133,7 +1133,10 @@ color: ${rgbToHex(style.color)};`
   // COPY ALL COLORS TOOL
   // ============================================================================
 
-  const COLOR_TOKEN_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b|rgba?\([^)]+\)/g;
+  // Computed styles serialize real colors as rgb()/rgba(); a bare-hex branch
+  // could only ever match url(...) fragments (e.g. "sprite.svg#fad") and
+  // produced false-positive "colors" the background then rejected.
+  const COLOR_TOKEN_RE = /rgba?\([^)]+\)/g;
 
   function showCollectionToast(count) {
     const toast = createElement('div', {
@@ -1173,9 +1176,8 @@ color: ${rgbToHex(style.color)};`
     const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE', 'NOSCRIPT', 'TEMPLATE']);
 
     function addRaw(raw) {
-      if (!raw) return;
-      if (raw === 'none' || raw === 'initial' || raw === 'inherit' || raw === 'unset') return;
-      if ((!raw) || (raw === 'transparent') || (raw === 'rgba(0, 0, 0, 0)')) return;
+      if (!raw || raw === 'none' || raw === 'initial' || raw === 'inherit' || raw === 'unset'
+        || raw === 'transparent' || raw === 'rgba(0, 0, 0, 0)') return;
       const hex = rgbToHex(raw);
       if (hex) colors.add(hex);
     }
@@ -1187,9 +1189,13 @@ color: ${rgbToHex(style.color)};`
       for (const m of matches) addRaw(m);
     }
 
-    // Scan body content only: head/script/style nodes have no rendered colors
-    // and would otherwise burn the element budget before real content.
-    const elements = document.body ? document.body.querySelectorAll('*') : [];
+    // Seed with the root elements — the page's own background usually lives
+    // on html/body and background-color does not inherit to descendants —
+    // then scan body content only: head/script/style nodes have no rendered
+    // colors and would otherwise burn the element budget before real content.
+    const elements = document.body
+      ? [document.documentElement, document.body, ...document.body.querySelectorAll('*')]
+      : [];
     let count = 0;
     for (const el of elements) {
       if (count >= MAX_ELEMENTS) break;
