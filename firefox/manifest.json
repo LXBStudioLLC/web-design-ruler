@@ -79,11 +79,5 @@
       },
       "description": "Activate the Measurement Tool"
     }
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["scripts/content-script.js"],
-      "matches": ["http://*/*", "https://*/*"]
-    }
-  ]
+  }
 }
