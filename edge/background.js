@@ -22,6 +22,10 @@ const PING_TIMEOUT_MS = 1500;  // Longer timeout for Edge
 const INJECTION_RETRY_DELAY_MS = 200;  // Longer delay for Edge
 const MAX_INJECTION_RETRIES = 4;  // More retries for Edge
 const KEEP_ALIVE_ALARM_NAME = 'wdr-keep-alive';
+// NOTE: alarm periods below 1 minute are honored only from Chromium 120;
+// on Edge 102-119 (our minimum is 102) the browser clamps this to 1 minute
+// and logs a console warning. Acceptable: the alarm is a wake-up aid for the
+// service worker, not a hard keep-alive, so a 1-minute cadence still works.
 const WAKE_UP_INTERVAL_MINUTES = 0.5;
 
 const RESTRICTED_URL_PATTERNS = [
