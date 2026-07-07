@@ -60,11 +60,42 @@ function setBadge(text) {
 function flashDoneBadge() {
   if (badgeClearTimer) clearTimeout(badgeClearTimer);
   setBadge('\u2713');
+  forgetToolTab(); // the tool session ended with a result
   badgeClearTimer = setTimeout(() => {
     setBadge('');
     badgeClearTimer = null;
   }, 2000);
 }
+
+// The \u25CF badge belongs to the tab whose tool set it. storage.session (FF 115+)
+// survives event-page unloads; older Firefox falls back to storage.local so
+// the owner is still tracked, just with a persisted key.
+const sessionStore = (browserAPI.storage && browserAPI.storage.session) || browserAPI.storage.local;
+
+function rememberToolTab(tabId) {
+  sessionStore.set({ activeToolTabId: tabId }).catch(() => {});
+}
+
+function forgetToolTab() {
+  sessionStore.remove('activeToolTabId').catch(() => {});
+}
+
+function clearBadgeIfOwner(tabId) {
+  sessionStore.get('activeToolTabId').then(({ activeToolTabId }) => {
+    if (activeToolTabId === tabId) {
+      if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
+      setBadge('');
+      forgetToolTab();
+    }
+  }).catch(() => {});
+}
+
+// A tool dies silently with its page: no toolCancelled is ever sent when the
+// owning tab closes or navigates away, so clear the stale \u25CF here.
+browserAPI.tabs.onRemoved.addListener((tabId) => clearBadgeIfOwner(tabId));
+browserAPI.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status === 'loading') clearBadgeIfOwner(tabId);
+});
 
 // ============================================================================
 // INITIALIZATION
@@ -251,6 +282,7 @@ async function activateTool(actionType, tab = null) {
       log('[WDR-Firefox] Tool activated:', actionType);
       if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
       setBadge('\u25CF');
+      rememberToolTab(tab.id);
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Failed to activate tool. Try refreshing.' };
@@ -294,10 +326,18 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates async response
   }
 
-  // Tool cancelled (Esc) in the content script: clear the activity badge
+  // Tool cancelled (Esc) in the content script: clear the activity badge \u2014
+  // but only when the cancel comes from the badge's owning tab (or the owner
+  // is unknown); a stale cancel must not clear a newer tool's badge.
   if (message.action === 'toolCancelled') {
-    if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
-    setBadge('');
+    const senderTabId = sender.tab && sender.tab.id;
+    sessionStore.get('activeToolTabId').then(({ activeToolTabId }) => {
+      if (activeToolTabId == null || senderTabId == null || activeToolTabId === senderTabId) {
+        if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
+        setBadge('');
+        forgetToolTab();
+      }
+    }).catch(() => {});
     sendResponse({ success: true });
     return false;
   }

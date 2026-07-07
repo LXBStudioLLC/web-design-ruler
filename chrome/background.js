@@ -46,11 +46,41 @@ function setBadge(text) {
 function flashDoneBadge() {
   if (badgeClearTimer) clearTimeout(badgeClearTimer);
   setBadge('\u2713');
+  forgetToolTab(); // the tool session ended with a result
   badgeClearTimer = setTimeout(() => {
     setBadge('');
     badgeClearTimer = null;
   }, 2000);
 }
+
+// The \u25CF badge belongs to the tab whose tool set it. The owner is kept in
+// storage.session (survives service-worker restarts, dies with the browser)
+// so a closed/navigated tab, or a stale toolCancelled from another tab, can
+// be told apart from the live owner.
+function rememberToolTab(tabId) {
+  chrome.storage.session.set({ activeToolTabId: tabId });
+}
+
+function forgetToolTab() {
+  chrome.storage.session.remove('activeToolTabId');
+}
+
+function clearBadgeIfOwner(tabId) {
+  chrome.storage.session.get('activeToolTabId', ({ activeToolTabId }) => {
+    if (activeToolTabId === tabId) {
+      if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
+      setBadge('');
+      forgetToolTab();
+    }
+  });
+}
+
+// A tool dies silently with its page: no toolCancelled is ever sent when the
+// owning tab closes or navigates away, so clear the stale \u25CF here.
+chrome.tabs.onRemoved.addListener((tabId) => clearBadgeIfOwner(tabId));
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status === 'loading') clearBadgeIfOwner(tabId);
+});
 
 // ============================================================================
 // INITIALIZATION
@@ -286,6 +316,7 @@ async function activateTool(actionType, tab = null) {
         log('[WDR] Tool activated:', actionType);
         if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
         setBadge('\u25CF');
+        rememberToolTab(tab.id);
         resolve({ success: true });
       });
     });
@@ -321,10 +352,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
 
-  // Tool cancelled (Esc) in the content script: clear the activity badge
+  // Tool cancelled (Esc) in the content script: clear the activity badge \u2014
+  // but only when the cancel comes from the badge's owning tab (or the owner
+  // is unknown); a stale cancel must not clear a newer tool's badge.
   if (message.action === 'toolCancelled') {
-    if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
-    setBadge('');
+    const senderTabId = sender.tab && sender.tab.id;
+    chrome.storage.session.get('activeToolTabId', ({ activeToolTabId }) => {
+      if (activeToolTabId == null || senderTabId == null || activeToolTabId === senderTabId) {
+        if (badgeClearTimer) { clearTimeout(badgeClearTimer); badgeClearTimer = null; }
+        setBadge('');
+        forgetToolTab();
+      }
+    });
     sendResponse({ success: true });
     return false;
   }
