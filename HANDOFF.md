@@ -237,7 +237,7 @@ Replace any mention of keyboard shortcuts with:
 |---|---|---|---|
 | `fix/v2.0.2` | `main` (4fe5983) | `6f4473d` | 2.0.2 |
 | `feat/v2.1` | `fix/v2.0.2` (6f4473d) | `4ef358f` | 2.1.0 |
-| `feat/v2.2-parity` | `feat/v2.1` (4ef358f) | `55bd8f1` | 2.2.0 |
+| `feat/v2.2-parity` | `feat/v2.1` (4ef358f) | `0f2b3a3` (final-pass code tip; docs commits follow — origin HEAD is authoritative) | 2.2.0 |
 
 All branches pushed to `origin`. No tags created. No merges to `main`.
 
@@ -296,3 +296,98 @@ parity, Edge + docs + packaging, promo source).
 - **`host_permissions` vs store copy** — reserved owner decision.
 - dist zips are rebuilt post-fix with forward-slash entries (AMO is
   picky about backslash paths in Windows-built zips).
+
+---
+
+# Deep-Check Addendum v2 (2026-07-07)
+
+Second adversarial pass over the staged v2.2.0: a 12-territory exhaustive
+audit (20 confirmed / 65 advisory findings; full JSON archived outside the
+repo as `FINAL-PASS-FINDINGS.json`), followed by a fix pass of 25 commits
+(`744b517`..`0f2b3a3`) on `feat/v2.2-parity`. The v1 addendum's tip
+references are historical.
+
+## Fixed in this pass (by area)
+
+- **Picker media sampling** rewritten: object-fit/object-position mapping,
+  padding-aware content box, out-of-bounds/letterbox → null instead of a
+  false `#000000`, IMG/VIDEO readiness guards (no clientWidth fallback),
+  clearRect before CANVAS/VIDEO redraws, cross-origin taint memo (`744b517`).
+- **Native EyeDropper** runs tool cleanup on entry, reports cancel so the
+  ● badge clears, and falls back to the in-page picker on failure
+  (`2a02a44`).
+- **Measure tool** is left-button-only and suppresses the context menu
+  while active (`90a3ec9`). **Copy All Colors** seeds html/body back into
+  the scan (457a482 regression) and drops url()-hex false positives
+  (`4d0b47b`).
+- **All tools** ignore input during the 1–1.5 s confirmation window
+  (`abb4c29`) and report the actual clipboard outcome (`de40c5f`); the
+  web-font badge matches case-insensitively (`ea1213c`); picker/font
+  re-resolve the hovered element on scroll (`e4cf473`).
+- **Backgrounds ×3**: the ● badge tracks its owning tab (storage.session)
+  and clears on tab close/navigation; a stale toolCancelled can no longer
+  clear a newer tool's badge (`fef889b`); context-menu/keyboard activation
+  failures flash a red `!` badge + tooltip (`e317f2b`); chrome's injection
+  retry waits like edge's (`ed4d68d`); firefox chains log storage errors,
+  still forward to the popup, and contextMenus.create failures are
+  actually observed (`d3041fe`).
+- **Popup ×3**: delete-confirm can't fire cross-palette and saved-font
+  removal is by identity (`f361639`); legacy-record guards in the three
+  copy paths (`c96efc2`); Copy-as-CSS re-enables on live data, one toast
+  at a time, Show-all follows the collapse state (`af794ab`); contrast
+  readout shows two decimals + aria-pressed/aria-expanded (`20bd3c5`);
+  import validates names and honors createPalette's result (`9b4f81f`);
+  firefox storage failures now surface (`d3d633d`); dead getPalette
+  removed ×3 (`3fa0515`).
+- **CSS ×3**: dark-mode contrast repairs (confirm chip, font-preview
+  checkerboard, small controls, info toast, welcome tagline), options
+  page gains its missing dark theme (closing the Feature 2.7 gap), and
+  disabled buttons look disabled (`766ac0b`).
+- **Manifests/CI**: web_accessible_resources dropped ×3; chrome declares
+  minimum_chrome_version 102 (`f554c5b`); edge's sub-minute alarm clamp
+  documented (`73b19af`); CI gains a tag==manifest guard and a single
+  de-raced release job (`1059109`).
+- **Docs/cosmetics**: welcome-page context-menu wording matches the real
+  flat menu ×3 (`5e23116`); stale 2.0.0 file headers and the popup v2.0
+  fallback badge bumped to 2.2 (`0f2b3a3`).
+
+## Gates re-run after the pass (all green)
+
+- `node --check` on all 15 runtime JS files.
+- chrome↔edge parity: content-script diff = header line only; popup.js /
+  popup.css / palette.js / options.css / welcome assets byte-identical.
+- Greps: `prompt(|confirm(|alert(` = 0, `Ctrl+Shift` = 0,
+  `fetch(|XMLHttpRequest` = 0.
+- dist zips rebuilt (forward-slash arcnames), extracted, `diff -rq` vs
+  tree: IDENTICAL ×3.
+- `web-ext lint` (firefox): 0 errors, 1 warning (accepted:
+  MISSING_DATA_COLLECTION_PERMISSIONS — owner action below).
+
+## Documented as accepted (not fixed, by design)
+
+- **`palettes` read-modify-write races** — background pageColorsCollected
+  vs popup palette.js mutators (recentColors similarly two-writer). In
+  practice the popup is closed during collection; a single-writer
+  refactor is a v2.3 candidate, not a 2.2.0 blocker.
+- **chrome/edge palette.js ignores `runtime.lastError`** in its storage
+  callbacks (false-success toasts possible on storage failure) — same
+  risk class as the RMW race; belongs to the same v2.3 storage refactor.
+- **getRenderedFont canvas heuristics** — oblique-angle fonts defeat the
+  shorthand parser and the first-font fallback can over-claim; detector
+  is best-effort by design (advisory).
+- **options.js settings RMW** — two toggles racing is theoretical.
+
+## Still open (owner action)
+
+- Manual smoke matrix (Section 3.8) in real browsers before upload.
+- AMO `data_collection_permissions` manifest field before AMO upload.
+- `host_permissions` vs store copy — reserved owner decision.
+- **Store screenshots**: `screenshots/` and the parent `IMAGES/` all
+  predate the v2.1/v2.2 UI (tabbed popup, dark mode, options page,
+  contrast checker, saved fonts, measure area) — re-capture before the
+  CWS/Edge/AMO uploads.
+- `docs/assets/social-preview.png` artwork freshness unverified against
+  current branding.
+- CoC contact `LXBStudioLLC@gmail.com` (deliberate correction in
+  `2ac5b81`) — confirm that mailbox exists before pointing contributors
+  at it.
