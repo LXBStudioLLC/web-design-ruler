@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
           copyToClipboard(snippet);
           showNotification('CSS snippet copied!', 'success');
         }
-      });
+      }).catch((e) => console.error('[WDR-Firefox] storage error:', e));
     });
 
     const clearRecentBtn = document.getElementById('clear-recent-colors');
@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
         browserAPI.storage.local.set({ recentColors: [] }).then(() => {
           document.getElementById('recent-colors').classList.add('hidden');
           showNotification('Recent colors cleared', 'success');
+        }).catch((e) => {
+          console.error('[WDR-Firefox] storage error:', e);
+          showNotification('Storage error', 'error');
         });
       } else {
         clearRecentBtn.classList.add('confirming');
@@ -469,7 +472,7 @@ function renderSavedFonts() {
       if (list.classList.contains('collapsed')) showAllBtn.style.display = 'none';
       list.insertAdjacentElement('afterend', showAllBtn);
     }
-  }).catch(() => {});
+  }).catch((e) => console.error('[WDR-Firefox] renderSavedFonts error:', e));
 }
 
 // ============================================================================
@@ -882,7 +885,7 @@ function listenForMessages() {
         if (recentColors.length > 0) {
           displayRecentColors(recentColors);
         }
-      });
+      }).catch((e) => console.error('[WDR-Firefox] storage error:', e));
     } else if (message.action === 'fontDetected' && message.fontDetails) {
       displayFontDetails(message.fontDetails);
     } else if (message.action === 'measurementTaken' && message.measurements) {
