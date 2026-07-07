@@ -13,6 +13,7 @@ function log(...args) { if (_debug) console.log(...args); }
 let currentPaletteName = null;
 let palettes = {};
 let removeColorTarget = null;
+let deletePaletteTimer = null; // module scope so displayPalette can clear a stale confirm
 let contrastFg = null;
 let contrastBg = '#FFFFFF';
 let armedSlot = null;
@@ -330,7 +331,7 @@ function renderSavedFonts() {
     const showCount = savedFontsExpanded ? savedFonts.length : 10;
     const visible = savedFonts.slice(0, showCount);
 
-    visible.forEach((entry, index) => {
+    visible.forEach((entry) => {
       const item = document.createElement('li');
       item.className = 'saved-font-item';
 
@@ -380,7 +381,11 @@ function renderSavedFonts() {
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         chrome.storage.local.get('savedFonts', ({ savedFonts = [] }) => {
-          savedFonts.splice(index, 1);
+          // Remove by identity, not render-time index: two rapid removals
+          // would otherwise splice the wrong entry from the re-read array.
+          const i = savedFonts.findIndex(f => f && f.savedAt === entry.savedAt && f.fontFamily === entry.fontFamily);
+          if (i === -1) return;
+          savedFonts.splice(i, 1);
           chrome.storage.local.set({ savedFonts }, () => {
             renderSavedFonts();
             showNotification('Font removed', 'success');
@@ -684,11 +689,17 @@ function displayPalette(paletteName) {
   };
 
   const deleteBtn = document.getElementById('delete-palette');
-  let deleteTimer = null;
+  // Reset any confirm state left by a previously displayed palette: without
+  // this, switching palettes while armed lets a single click delete the
+  // newly displayed palette (and the old closure's timer stays live).
+  if (deletePaletteTimer) { clearTimeout(deletePaletteTimer); deletePaletteTimer = null; }
+  deleteBtn.classList.remove('confirming');
+  deleteBtn.textContent = 'Delete';
 
   deleteBtn.onclick = () => {
     if (deleteBtn.classList.contains('confirming')) {
-      clearTimeout(deleteTimer);
+      clearTimeout(deletePaletteTimer);
+      deletePaletteTimer = null;
       deleteBtn.classList.remove('confirming');
       deleteBtn.textContent = 'Delete';
       deletePalette(paletteName, () => {
@@ -700,7 +711,7 @@ function displayPalette(paletteName) {
     } else {
       deleteBtn.classList.add('confirming');
       deleteBtn.textContent = 'Confirm delete?';
-      deleteTimer = setTimeout(() => {
+      deletePaletteTimer = setTimeout(() => {
         deleteBtn.classList.remove('confirming');
         deleteBtn.textContent = 'Delete';
       }, 3000);
