@@ -155,6 +155,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     document.body.style.userSelect = 'none';
 
     let isActive = true;
+    let isFinishing = false; // color committed; ignore further input until the delayed cleanup runs
     let currentBgColor = null;
     let currentTextColor = null;
     let currentPixelColor = null; // For image/canvas/video
@@ -351,7 +352,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function processMove() {
       rafId = null;
-      if (!isActive || !lastMoveEvent) return;
+      if (!isActive || isFinishing || !lastMoveEvent) return;
 
       const e = lastMoveEvent;
       const element = document.elementFromPoint(e.clientX, e.clientY);
@@ -403,6 +404,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     }
 
     function selectColor(selectedColor, colorLabel) {
+      isFinishing = true;
       log('[WDR-Firefox] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
 
       // Notify background script (single-writer: background handles storage)
@@ -425,7 +427,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     }
 
     function onClick(e) {
-      if (!isActive) return;
+      if (!isActive || isFinishing) return;
 
       e.preventDefault();
       e.stopPropagation();
@@ -465,7 +467,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     }
 
     function onContextMenu(e) {
-      if (!isActive) return;
+      if (!isActive || isFinishing) return;
       e.preventDefault();
       e.stopPropagation();
       if (currentTextColor) {
@@ -531,6 +533,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     document.body.style.userSelect = 'none';
 
     let isActive = true;
+    let isFinishing = false; // font committed; ignore further input until the delayed cleanup runs
     let highlightedElement = null;
     let highlightBox = null;
     let rafId = null;
@@ -747,7 +750,7 @@ color: ${rgbToHex(style.color)};`
 
     function processMove() {
       rafId = null;
-      if (!isActive || !lastMoveEvent) return;
+      if (!isActive || isFinishing || !lastMoveEvent) return;
 
       const e = lastMoveEvent;
       const element = document.elementFromPoint(e.clientX, e.clientY);
@@ -760,10 +763,12 @@ color: ${rgbToHex(style.color)};`
     }
 
     function onClick(e) {
-      if (!isActive || !highlightedElement) return;
+      if (!isActive || isFinishing || !highlightedElement) return;
 
       e.preventDefault();
       e.stopPropagation();
+
+      isFinishing = true;
 
       const details = getFontDetails(highlightedElement);
       safeSend({ action: 'fontDetected', fontDetails: details });
@@ -830,6 +835,7 @@ color: ${rgbToHex(style.color)};`
     document.body.style.userSelect = 'none';
 
     let isActive = true;
+    let isFinishing = false; // measurement committed; ignore further input until the delayed cleanup runs
     let isDrawing = false;
     let startX = 0, startY = 0, endX = 0, endY = 0;
     let rafId = null;
@@ -988,7 +994,7 @@ color: ${rgbToHex(style.color)};`
     }
 
     function onMouseDown(e) {
-      if (!isActive) return;
+      if (!isActive || isFinishing) return;
       if (e.button !== 0) return; // left button only: a right-click must not start (or commit) a measurement
       shiftHeld = e.shiftKey;
       isDrawing = true;
@@ -1029,6 +1035,7 @@ color: ${rgbToHex(style.color)};`
       if (e.button !== 0) return; // releases of other buttons don't end the drag
 
       isDrawing = false;
+      isFinishing = true;
       shiftHeld = e.shiftKey;
       let x = e.clientX;
       let y = e.clientY;
