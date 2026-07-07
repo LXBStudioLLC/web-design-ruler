@@ -693,7 +693,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       try {
         if (document.fonts) {
           for (const face of document.fonts) {
-            if (face.status === 'loaded' && face.family.replace(/^["']|["']$/g, '') === renderedFont) {
+            // CSS font-family matching is case-insensitive; compare likewise.
+            if (face.status === 'loaded' && face.family.replace(/^["']|["']$/g, '').toLowerCase() === renderedFont.toLowerCase()) {
               isWebFont = true;
               break;
             }
@@ -770,6 +771,8 @@ color: ${rgbToHex(style.color)};`
       isFinishing = true;
 
       const details = getFontDetails(highlightedElement);
+      log('[WDR-Firefox] Font detected:', details);
+
       safeSend({ action: 'fontDetected', fontDetails: details });
 
       // Copy CSS to clipboard; the sub-line reports the actual result
