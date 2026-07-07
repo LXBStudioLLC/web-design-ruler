@@ -44,7 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const list = document.getElementById('saved-fonts-list');
       const btn = document.getElementById('toggle-saved-fonts');
       list.classList.toggle('collapsed');
-      btn.textContent = list.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+      const collapsed = list.classList.contains('collapsed');
+      btn.textContent = collapsed ? '\u25B6' : '\u25BC';
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      // The dynamically inserted 'Show all' button sits outside the ul;
+      // hide it together with the collapsed list.
+      const showAll = document.getElementById('show-all-fonts');
+      if (showAll) showAll.style.display = collapsed ? 'none' : '';
     });
 
     document.getElementById('copy-css-export').addEventListener('click', () => {
@@ -459,6 +465,7 @@ function renderSavedFonts() {
         savedFontsExpanded = !savedFontsExpanded;
         renderSavedFonts();
       });
+      if (list.classList.contains('collapsed')) showAllBtn.style.display = 'none';
       list.insertAdjacentElement('afterend', showAllBtn);
     }
   }).catch(() => {});
@@ -869,6 +876,13 @@ function listenForMessages() {
     } else if (message.action === 'measurementTaken' && message.measurements) {
       displayMeasurement(message.measurements);
     }
+
+    if ((message.action === 'colorPicked' && message.color) ||
+        (message.action === 'fontDetected' && message.fontDetails) ||
+        (message.action === 'measurementTaken' && message.measurements)) {
+      // Exportable data just arrived while the popup is open
+      document.getElementById('copy-css-export').disabled = false;
+    }
   });
 }
 
@@ -902,6 +916,9 @@ async function copyToClipboard(text) {
 }
 
 function showNotification(message, type = 'info') {
+  // One toast at a time: stacked notifications render on top of each other
+  // at the same fixed position, hiding the earlier message.
+  document.querySelectorAll('.notification').forEach(n => n.remove());
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   notification.textContent = message;
