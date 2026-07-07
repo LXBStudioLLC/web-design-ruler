@@ -27,6 +27,14 @@ jobs:
           VERSION=$(jq -r .version ${{ matrix.browser }}/manifest.json)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Verify tag matches manifest version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          if [[ "$GITHUB_REF_NAME" != "v${{ steps.ver.outputs.version }}" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match ${{ matrix.browser }} manifest version ${{ steps.ver.outputs.version }} — bump the manifest(s) or retag."
+            exit 1
+          fi
+
       - name: Build zip
         run: |
           cd ${{ matrix.browser }}
@@ -42,9 +50,23 @@ jobs:
           path: web-design-ruler-${{ steps.ver.outputs.version }}-${{ matrix.browser }}.zip
           retention-days: 90
 
+  release:
+    name: Attach zips to release
+    # Exactly one job creates/updates the tag release: the three matrix jobs
+    # each running action-gh-release raced to create it, intermittently
+    # leaving the release with only one or two of the three zips.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: web-design-ruler-*
+          merge-multiple: true
+
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: web-design-ruler-${{ steps.ver.outputs.version }}-${{ matrix.browser }}.zip
+          files: web-design-ruler-*.zip
           fail_on_unmatched_files: true
