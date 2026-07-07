@@ -67,6 +67,56 @@ storage, no innerHTML, all three builds). No new permissions.
 - Removed dead `getColorFromImage/Canvas/Video` helpers left behind by
   the cached-sampler rewrite.
 
+### Fixed (final pass, 2026-07-07)
+- Fallback picker samples media pixels through the real drawn rectangle:
+  object-fit/object-position aware, padding-corrected content box,
+  readiness guards for undecoded images/videos, per-sample canvas clear,
+  and out-of-bounds/letterbox hovers fall back to the element background
+  instead of reporting `#000000`. Cross-origin media is probed once, not
+  every frame.
+- Native EyeDropper (opt-in) closes any active tool on entry, clears the
+  toolbar badge on cancel, and falls back to the in-page picker when it
+  fails to open.
+- Measure tool ignores non-left buttons and suppresses the context menu
+  while active — a right-click can no longer overwrite the last real
+  measurement with a junk 0×0.
+- Copy All Colors includes the page's own `html`/`body` background again
+  and no longer counts `url(...)` fragments as colors.
+- Tools ignore further input during their 1–1.5 s confirmation window,
+  and every "Copied" confirmation reflects the actual clipboard result.
+- Web-font badge matches `@font-face` families case-insensitively;
+  picker and font detector re-resolve the hovered element on scroll.
+- Toolbar `●` badge tracks its owning tab: it clears when that tab
+  closes or navigates, and a stale cancel from another tab can't clear
+  a newer tool's badge. Failed context-menu/keyboard activations flash
+  a red `!` badge with the error in the tooltip.
+- Popup: switching palettes disarms delete-confirm (one click could
+  delete the wrong palette); saved-font removal is by identity, not
+  render index; legacy v1.x records can't put `undefined` or bare units
+  on the clipboard; palette import rejects blank names, caps at 40
+  chars, and reports collisions instead of claiming success; Copy as
+  CSS re-enables when data arrives live; the contrast ratio shows two
+  decimals so it can't contradict its own AA badge; notifications
+  replace instead of stacking; ARIA states for contrast slots and the
+  saved-fonts toggle.
+- Dark mode: remove-color confirm chip, font preview (now a
+  mid-luminance checkerboard), Clear/remove buttons, version pill, info
+  toasts, and the welcome tagline are all readable; the options page
+  gained its missing dark theme.
+- Firefox: background/popup promise chains log storage failures and
+  still update the popup instead of dying silently; context-menu
+  creation failures are actually observed (menus.create is not
+  promisified).
+- Manifests: dropped the unnecessary `web_accessible_resources`
+  (extension-fingerprinting surface) from all three builds; Chrome
+  declares `minimum_chrome_version` 102 to match its
+  `world: 'ISOLATED'` usage.
+- CI: tag builds fail fast on tag/manifest version mismatch, and
+  release assets are attached by one job instead of three racing
+  matrix jobs.
+- Stale `Version: 2.0.0` file headers and the popup's `v2.0` fallback
+  badge bumped to 2.2.
+
 ## [2.1.0] — 2026-07-06
 
 Performance, accessibility, and new tools. No new permissions (options
