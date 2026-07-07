@@ -586,6 +586,13 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       }
     }
 
+    // Wheel/keyboard scrolling moves the page under a stationary cursor:
+    // re-resolve the hovered element (client coordinates stay viewport-valid).
+    function onScroll() {
+      if (!isActive || isFinishing || !lastMoveEvent) return;
+      if (!rafId) rafId = requestAnimationFrame(processMove);
+    }
+
     function cleanup(reason) {
       if (!isActive) return;
       if (rafId) cancelAnimationFrame(rafId);
@@ -598,6 +605,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('contextmenu', onContextMenu, true);
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('scroll', onScroll, true);
 
       document.body.style.cursor = originalCursor;
       document.body.style.userSelect = originalUserSelect;
@@ -620,6 +628,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     document.addEventListener('click', onClick, true);
     document.addEventListener('contextmenu', onContextMenu, true);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
   }
 
   /**
@@ -927,6 +936,15 @@ color: ${rgbToHex(style.color)};`
       }
     }
 
+    // Wheel/keyboard scrolling moves the page under a stationary cursor: the
+    // fixed-position highlight would drift off its element. Clear the identity
+    // early-return and re-resolve at the same client coordinates.
+    function onScroll() {
+      if (!isActive || isFinishing || !lastMoveEvent) return;
+      highlightedElement = null;
+      if (!rafId) rafId = requestAnimationFrame(processMove);
+    }
+
     function cleanup(reason) {
       if (!isActive) return;
       if (rafId) cancelAnimationFrame(rafId);
@@ -938,6 +956,7 @@ color: ${rgbToHex(style.color)};`
       document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('scroll', onScroll, true);
 
       document.body.style.cursor = originalCursor;
       document.body.style.userSelect = originalUserSelect;
@@ -953,6 +972,7 @@ color: ${rgbToHex(style.color)};`
     document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('click', onClick, true);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
   }
 
   // ============================================================================
