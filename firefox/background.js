@@ -130,12 +130,22 @@ async function createContextMenus() {
     // Remove existing menus
     await browserAPI.contextMenus.removeAll();
 
-    // Create menus
+    // Create menus. menus.create is NOT promisified in Firefox — it returns
+    // the new item id synchronously and reports failures only via the
+    // callback + runtime.lastError — so awaiting the bare call observed
+    // nothing. Wrap the callback form instead (parity with the chrome build).
     for (const item of MENU_ITEMS) {
-      await browserAPI.contextMenus.create({
-        id: item.id,
-        title: `${item.title} with Web Design Ruler`,
-        contexts: ['page', 'selection', 'image']
+      await new Promise((resolve) => {
+        browserAPI.contextMenus.create({
+          id: item.id,
+          title: `${item.title} with Web Design Ruler`,
+          contexts: ['page', 'selection', 'image']
+        }, () => {
+          if (browserAPI.runtime.lastError) {
+            console.warn('[WDR-Firefox] Menu creation warning:', browserAPI.runtime.lastError.message);
+          }
+          resolve();
+        });
       });
     }
     log('[WDR-Firefox] Context menus created');
@@ -367,16 +377,20 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Forward to the popup only AFTER storage is written, so the popup's
   // re-read never races the write.
   if (message.action === 'colorPicked' && message.color) {
-    browserAPI.storage.local.set({ lastPickedColor: message.color });
+    browserAPI.storage.local.set({ lastPickedColor: message.color })
+      .catch((e) => console.error('[WDR-Firefox] lastPickedColor storage error:', e));
 
     browserAPI.storage.local.get('recentColors').then(({ recentColors = [] }) => {
       recentColors = recentColors.filter(c => c !== message.color);
       recentColors.unshift(message.color);
       recentColors = recentColors.slice(0, 20);
       return browserAPI.storage.local.set({ recentColors });
-    }).then(() => {
-      return browserAPI.runtime.sendMessage(message);
-    }).catch(() => {});
+    }).catch((e) => {
+      // Log storage failures but still forward, so an open popup updates
+      // (parity with chrome/edge, which forward regardless of write outcome);
+      // only the no-receiver rejection from sendMessage stays silent.
+      console.error('[WDR-Firefox] recentColors storage error:', e);
+    }).then(() => browserAPI.runtime.sendMessage(message)).catch(() => {});
 
     flashDoneBadge();
     sendResponse({ success: true });
@@ -384,18 +398,20 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'fontDetected' && message.fontDetails) {
-    browserAPI.storage.local.set({ lastDetectedFont: message.fontDetails }).then(() => {
-      return browserAPI.runtime.sendMessage(message);
-    }).catch(() => {});
+    browserAPI.storage.local.set({ lastDetectedFont: message.fontDetails })
+      .catch((e) => console.error('[WDR-Firefox] lastDetectedFont storage error:', e))
+      .then(() => browserAPI.runtime.sendMessage(message))
+      .catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return false;
   }
 
   if (message.action === 'measurementTaken' && message.measurements) {
-    browserAPI.storage.local.set({ lastMeasurement: message.measurements }).then(() => {
-      return browserAPI.runtime.sendMessage(message);
-    }).catch(() => {});
+    browserAPI.storage.local.set({ lastMeasurement: message.measurements })
+      .catch((e) => console.error('[WDR-Firefox] lastMeasurement storage error:', e))
+      .then(() => browserAPI.runtime.sendMessage(message))
+      .catch(() => {});
     flashDoneBadge();
     sendResponse({ success: true });
     return false;
@@ -414,10 +430,10 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       const validated = (message.colors || []).filter(c => typeof c === 'string' && /^#[0-9A-F]{6}$/i.test(c));
       palettes[finalName] = validated;
-      browserAPI.storage.local.set({ palettes }).then(() => {
+      return browserAPI.storage.local.set({ palettes }).then(() => {
         log('[WDR-Firefox] Palette created from page colors:', finalName, '(' + validated.length + ' colors)');
       });
-    });
+    }).catch((e) => console.error('[WDR-Firefox] pageColorsCollected storage error:', e));
     flashDoneBadge();
     sendResponse({ success: true });
     return false;
