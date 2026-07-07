@@ -32,7 +32,7 @@ or all three? Most logic bugs need to land in all three.
    - Firefox — `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → select `firefox/manifest.json`.
 2. Edit files in place; reload the extension from the browser's extensions
    page after each change.
-3. Test against [`TEST_CHECKLIST.md`](https://github.com/LXBStudioLLC/web-design-ruler/blob/main/TEST_CHECKLIST.md) (coming soon — for now, exercise color picker, font detector, measurement tool, and the right-click context menu on a few real sites).
+3. Test manually on real sites. Follow the smoke matrix in [HANDOFF.md](./HANDOFF.md) (Section 3.8) — at minimum exercise the color picker, font detector, measurement tool, palettes, and the right-click context menu on a few real sites.
 
 ## Commit messages
 
@@ -64,10 +64,24 @@ exploratory commits before opening the PR.
 1. Bump `version` in `chrome/manifest.json`, `edge/manifest.json`,
    `firefox/manifest.json`.
 2. Move `[Unreleased]` entries into a new dated section in `CHANGELOG.md`.
-3. Tag: `git tag vX.Y.Z && git push --tags`.
-4. The GitHub Actions build workflow will package and attach `.zip` artifacts
-   to the release.
-5. Upload artifacts to the [Chrome Web Store dashboard](https://chrome.google.com/webstore/devconsole) and [Firefox Add-on developer hub](https://addons.mozilla.org/developers/).
+3. Build the store-ready zips locally:
+   ```bash
+   # Example for v2.2.0 — run from the repo root
+   cd chrome && zip -r ../dist/web-design-ruler-2.2.0-chrome.zip . -x "*.DS_Store" "*.swp"
+   cd ../edge && zip -r ../dist/web-design-ruler-2.2.0-edge.zip . -x "*.DS_Store" "*.swp"
+   cd ../firefox && zip -r ../dist/web-design-ruler-2.2.0-firefox.zip . -x "*.DS_Store" "*.swp"
+   ```
+   These `dist/` zips are what gets uploaded to the stores. On Windows,
+   build them with a small Python `zipfile` walk instead: entry names must
+   use forward slashes (AMO rejects backslash paths), and Git Bash doesn't
+   ship the `zip` CLI by default.
+4. Tag: `git tag vX.Y.Z && git push --tags`.
+5. The [`.github/workflows/build.yml`](./.github/workflows/build.yml) workflow
+   runs on tag pushes, packages each browser build into a zip, uploads them as
+   workflow artifacts, and attaches them to the GitHub Release. This is a
+   parity/checksum build; the store uploads still use the locally built `dist/`
+   zips from step 3.
+6. Upload the `dist/` zips manually to the [Chrome Web Store dashboard](https://chrome.google.com/webstore/devconsole), [Microsoft Edge Partner Center](https://partner.microsoft.com/en-us/dashboard/microsoftedge/), and [Firefox Add-on developer hub](https://addons.mozilla.org/developers/).
 
 ## Code of conduct
 

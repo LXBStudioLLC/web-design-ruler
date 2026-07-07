@@ -6,9 +6,10 @@ Web Store listing, the Microsoft Edge Add-ons JSON API, and zip-archive
 timestamps. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions adhere to [Semantic Versioning](https://semver.org/).
 
-Five released versions to date, plus an unreleased prototype (`1.0` as
-**LXB Studio Design Assistant**) and an unreleased Firefox dev build with
-a sidebar UI cut before AMO submission. Newest first.
+Four released versions to date (1.1, 1.1.1, 2.0.0, 2.0.1), plus three
+pending documented versions (2.0.2, 2.1.0, 2.2.0), an unreleased prototype
+(`1.0` as **LXB Studio Design Assistant**), and an unreleased Firefox dev
+build with a sidebar UI cut before AMO submission. Newest first.
 
 ## [Unreleased]
 
@@ -470,7 +471,10 @@ Earliest extant build. Never submitted to any store. Pre-rebrand.
   and `lxb-design-assistant.zip` metadata; labelled "approx." where
   there's no explicit release record.
 
-[Unreleased]: https://github.com/LXBStudioLLC/web-design-ruler/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/LXBStudioLLC/web-design-ruler/compare/feat/v2.2-parity...HEAD
+[2.2.0]: https://github.com/LXBStudioLLC/web-design-ruler/compare/feat/v2.1...feat/v2.2-parity
+[2.1.0]: https://github.com/LXBStudioLLC/web-design-ruler/compare/fix/v2.0.2...feat/v2.2-parity
+[2.0.2]: https://github.com/LXBStudioLLC/web-design-ruler/compare/v2.0.1...feat/v2.2-parity
 [2.0.1]: https://github.com/LXBStudioLLC/web-design-ruler/releases/tag/v2.0.1
 [2.0.0]: https://github.com/LXBStudioLLC/web-design-ruler/releases/tag/v2.0.0
 [1.1.1]: https://addons.mozilla.org/firefox/addon/web-design-ruler/versions/

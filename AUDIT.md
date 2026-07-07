@@ -1,3 +1,5 @@
+> **Historical audit snapshot of v2.0.1 (captured 2026-07-06).** The findings below were addressed in v2.0.2–v2.2.0 — see [CHANGELOG.md](./CHANGELOG.md). Paths referencing `builds/` describe a retired repo layout.
+
 ## Overview
 
 The canonical Web Design Ruler source is the multi-browser v2.x tree in this repo — three per-browser unpacked extensions (`chrome/`, `edge/`, `firefox/`). All three manifests are currently at `2.0.1` (Firefox popup callback fix on top of the 2.0.0 rebuild).

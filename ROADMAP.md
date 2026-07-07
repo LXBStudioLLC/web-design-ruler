@@ -67,16 +67,6 @@ Phase 1 audit cleanup: 11 bug fixes across all three builds. See
 intentionally retained** — Phase 2 (Feature 2.3) wires them up via an
 options-page toggle.
 
-## Next — pre-v2.1 (remaining audit cleanup)
-
-| Item | Why it's deferred | Complexity |
-|---|---|---|
-| **Reconcile permissions with marketing copy** | Reserved owner decision (Section 13 of the implementation brief). Two paths: drop `host_permissions` + static `content_scripts`, or reword the store listing. | S or M |
-| **Replace fixed-interval Edge retries with real exponential backoff** | README claims exponential backoff; code uses fixed 200 ms. Not in Phase 1 scope. | XS |
-| **Unify restricted-URL pattern list across builds** | Chrome/Edge list includes `chrome-extension://` and `edge://`; Firefox omits them. Behaviorally equivalent. | XS |
-
----
-
 ## Shipped — v2.1.0 (2026-07-06)
 
 Performance, accessibility, and new tools. See
@@ -96,18 +86,27 @@ Performance, accessibility, and new tools. See
 Firefox v1.1.1 shipped with several Firefox-exclusive features that were
 removed in the v2.0.0 cross-browser rebuild to achieve parity. v2.2.0
 restored the ones that don't compromise privacy or cost new permissions —
-every item in the table below shipped, in all three builds where
-applicable. See [CHANGELOG](./CHANGELOG.md#220--2026-07-06).
+six changelog bullets shipped, covering the four 1.1.1 restorations in the
+table below plus Measure-tool area + Shift-snap, full Saved Fonts history,
+and right-click text-color picking. (Welcome page and toolbar badge are
+grouped in one bullet.) See [CHANGELOG](./CHANGELOG.md#220--2026-07-06).
 
 | Item | What it was in 1.1.1 | Complexity | New permissions | Privacy impact |
 |---|---|---|---|---|
 | **First-run welcome page** | `welcome/welcome.html` opened on `runtime.onInstalled` with hero badge, feature grid, shortcut cheat-sheet. A real onboarding moment that the current install flow lacks. | S | None | None |
 | **Toolbar badge state animation** | Green `●` while a tool is active, `✓` after a successful pick/detect/measure, cleared after 2 s. Visual confirmation without opening the popup. | S | None | None |
-| **Nested "Web Design Ruler" right-click submenu** | Parent menu with emoji-prefixed children (`🎨 Pick Color`, `🔤 Identify Font`, `📐 Measure Element`) and a separator. v2.0.0 flattened these into three siblings. | XS | None | None |
 | **"Copy All Colors on Page" context-menu action** | Walks the DOM, dedupes computed colors, builds an auto-named palette, copies as CSS custom properties to the clipboard. A workflow win that designers reach for often. | M | None | None |
-| **Theme awareness** | `browser.theme.onUpdated` listener + `getThemeColors` message handler — designed to drive theme-aware palette suggestions on Firefox. Currently registered nowhere in 2.0.x. | S | None (Firefox only API) | None |
 | **Firefox-themed default palette** | v1.1.1 seeded a "Firefox Theme" palette (`#FF9500`, `#002147`, `#00FEFF`, `#B1B1B3`, `#FFFFFF`) alongside LXB Studio / Material Design / Neutrals. v2.0.0 reduced defaults to two generic palettes. Worth restoring as a per-build seed. | XS | None | None |
-| **Resurrect the sidebar UI** | An unreleased `sidebar/panel.html` exists in the pre-1.1.1 Firefox dev build (cut before AMO submission). Firefox supports `sidebar_action` natively; could be a docked panel for picked colors + recent measurements. | L | `sidebar_action` (Firefox-only manifest key) | None |
+
+---
+
+## Open items (reserved owner decisions)
+
+| Item | Why it's deferred | Complexity |
+|---|---|---|
+| **Reconcile permissions with marketing copy** | Reserved owner decision (Section 13 of the implementation brief). Two paths: drop `host_permissions` + static `content_scripts`, or reword the store listing. | S or M |
+| **Replace fixed-interval Edge retries with real exponential backoff** | README claims exponential backoff; code uses fixed 200 ms. Not in Phase 1 scope. | XS |
+| **Unify restricted-URL pattern list across builds** | Chrome/Edge list includes `chrome-extension://` and `edge://`; Firefox omits them. Behaviorally equivalent. | XS |
 
 ---
 
@@ -116,6 +115,17 @@ applicable. See [CHANGELOG](./CHANGELOG.md#220--2026-07-06).
 These are user-requested or designer-workflow features. Each one would land in
 its own release. Listed without strict priority — pick whichever solves your
 most active workflow pain first.
+
+### Deferred from v2.2.0
+
+These three items were considered for the v2.2.0 Firefox-parity release but did
+not ship:
+
+| Item | What it was in 1.1.1 | Complexity | New permissions | Privacy impact |
+|---|---|---|---|---|
+| **Nested "Web Design Ruler" right-click submenu** | Parent menu with emoji-prefixed children (`🎨 Pick Color`, `🔤 Identify Font`, `📐 Measure Element`) and a separator. v2.0.0 flattened these into three siblings. v2.2.0 added a fourth flat item (Copy All Colors) instead. | XS | None | None |
+| **Theme awareness** | `browser.theme.onUpdated` listener + `getThemeColors` message handler — designed to drive theme-aware palette suggestions on Firefox. Currently registered nowhere in 2.x. | S | None (Firefox only API) | None |
+| **Resurrect the sidebar UI** | An unreleased `sidebar/panel.html` exists in the pre-1.1.1 Firefox dev build (cut before AMO submission). Firefox supports `sidebar_action` natively; could be a docked panel for picked colors + recent measurements. | L | `sidebar_action` (Firefox-only manifest key) | None |
 
 ### CSS export
 

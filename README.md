@@ -51,23 +51,35 @@ Three precision tools, available from one toolbar button or the right-click menu
 <td align="center" width="33%">
 
 ### 📏 Measure
-Pixel-perfect ruler that snaps to elements. Get width, height, padding, margin, and border in one drag. No more squinting at DevTools' computed panel.
+Pixel-perfect ruler that snaps to elements. Get width, height, padding, margin, border, and area in one drag; hold Shift to snap to a 10 px grid. Copy any value as CSS with one click.
 
 </td>
 <td align="center" width="33%">
 
 ### 🔠 Identify Font
-Hover any text on any site. See font family, weight, size, line-height, letter-spacing, and color — instantly. Click to lock the panel for copy-paste.
+Hover any text on any site. See font family, weight, size, line-height, letter-spacing, and color — instantly. Save detected fonts to a rolling history, copy any entry as CSS, or lock the panel for copy-paste.
 
 </td>
 <td align="center" width="33%">
 
 ### 🎨 Pick Color
-Eyedropper-style color picker with HEX/RGB/HSL output, recent colors history, and saved palettes. Native EyeDropper API where supported, visual fallback elsewhere.
+Eyedropper-style color picker with HEX/RGB/HSL output, recent colors history, saved palettes, and a built-in WCAG contrast checker. Right-click any swatch to copy its hex. Optional native EyeDropper (enable it in Options on Chrome/Edge); visual in-page picker by default everywhere.
 
 </td>
 </tr>
 </table>
+
+---
+
+## Keyboard shortcuts
+
+- **Open the popup:** `Alt+Shift+R`
+- **Activate the color picker:** `Alt+Shift+P`
+- **Activate the font detector:** `Alt+Shift+F`
+- **Activate the measurement tool:** `Alt+Shift+M`
+
+On Mac, use `Option+Shift+R/P/F/M`. Customize or reassign any shortcut in your
+browser's extension shortcuts settings.
 
 ---
 
@@ -115,7 +127,7 @@ The four guarantees that shape every line of code in this repo:
 > to function. See [each manifest](./chrome/manifest.json) for the exact list.
 
 > **No ads, no trackers, no bloat.** Every dependency adds weight and risk. We
-> shipped this in roughly 60 KB of JavaScript per build.
+> shipped this in roughly 100 KB of JavaScript per build.
 
 > **Works offline.** No internet connection is required for the tools to
 > operate after installation.
@@ -142,15 +154,22 @@ If it saves you ten clicks a day, it's done its job.
 ## What's next
 
 The [Roadmap](./ROADMAP.md) is the source of truth for upcoming work.
-Highlights:
+Recent releases:
 
-- **v2.0.1** — audit-driven polish (Firefox popup callback fix, permissions
-  reconciliation) before the v2.0.0 store upload.
-- **v2.1** — performance work on the mousemove paths and a popup toggle for
-  the native EyeDropper API.
-- **v2.2+** — CSS export, spacing inspector, WCAG contrast checker,
-  box-shadow / gradient extractor, annotated screenshot export, per-site
-  palettes.
+- **v2.0.2** — Phase 1 audit cleanup: tool mutual exclusion, inline palette
+  CRUD, `Alt+Shift+R/P/F/M` shortcuts, `safeSend()` context-invalidation
+  guards, saved fonts list, and security hardening.
+- **v2.1.0** — rAF-throttled mousemove, cached panel text nodes, options page
+  with native EyeDropper opt-in, WCAG contrast checker, Copy as CSS,
+  measurement copy buttons, recent-colors management, dark mode, and
+  accessibility pass.
+- **v2.2.0** — Firefox parity restoration: Copy All Colors on Page, measure
+  area + Shift-snap, full saved-fonts history, right-click text-color picking,
+  first-run welcome page, toolbar badge, and a Firefox-themed default palette.
+
+Future candidates are in ROADMAP's **Later — v2.3+** section: spacing
+inspector, box-shadow / gradient extractor, annotated screenshot export,
+per-site palettes, and more.
 
 Open an [issue](https://github.com/LXBStudioLLC/web-design-ruler/issues) to
 push something up the list.
