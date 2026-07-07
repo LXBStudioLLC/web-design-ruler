@@ -199,6 +199,12 @@ kbd {
     background: #0a0a14;
   }
 
+  .tagline {
+    /* The header keeps a hard-coded near-black background in both schemes,
+       but the dark ramp turns --gray-300 into #3a3a5a (unreadable here). */
+    color: var(--gray-500);
+  }
+
   .tool-card,
   .shortcut-list li,
   .privacy {

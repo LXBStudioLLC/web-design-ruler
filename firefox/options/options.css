@@ -80,3 +80,31 @@ main {
   line-height: 1.4;
   margin-left: 24px;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gray-50: #1a1a2e;
+    --gray-100: #16213e;
+    --gray-200: #2a2a4a;
+    --gray-300: #3a3a5a;
+    --gray-400: #6a6a8a;
+    --gray-500: #8a8aaa;
+    --gray-600: #aaaaca;
+    --gray-700: #cccccc;
+    --gray-800: #e0e0e0;
+    --gray-900: #f0f0f0;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.4);
+  }
+
+  body {
+    background: var(--gray-50);
+    color: var(--gray-800);
+  }
+
+  .header {
+    /* Same trick as the popup: the light theme paints the header with
+       --gray-800, which the dark ramp flips to a light value. */
+    background: #0d0d1a;
+  }
+}
