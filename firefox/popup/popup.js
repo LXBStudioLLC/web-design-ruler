@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializePalettes();
     initializeContrast();
 
+    document.getElementById('toggle-saved-fonts').setAttribute('aria-expanded', 'true');
     document.getElementById('toggle-saved-fonts').addEventListener('click', () => {
       const list = document.getElementById('saved-fonts-list');
       const btn = document.getElementById('toggle-saved-fonts');
@@ -790,6 +791,7 @@ function createColorSwatch(color) {
       else contrastBg = color;
       armedSlot = null;
       document.querySelectorAll('.contrast-slot').forEach(s => s.classList.remove('armed'));
+      syncArmedSlotAria();
       updateContrast();
     }
   });
@@ -997,7 +999,9 @@ function updateContrast() {
   const ratio = contrastRatio(contrastFg, contrastBg);
   document.getElementById('contrast-fg-swatch').style.backgroundColor = contrastFg;
   document.getElementById('contrast-bg-swatch').style.backgroundColor = contrastBg;
-  document.getElementById('contrast-ratio').textContent = ratio.toFixed(1);
+  // Two decimals so the readout can't show '4.5' while the raw ratio
+  // (e.g. 4.46) fails the AA badge comparison right next to it.
+  document.getElementById('contrast-ratio').textContent = ratio.toFixed(2);
 
   const badges = document.getElementById('contrast-badges');
   badges.replaceChildren();
@@ -1015,7 +1019,14 @@ function updateContrast() {
   });
 }
 
+function syncArmedSlotAria() {
+  document.querySelectorAll('.contrast-slot').forEach(s => {
+    s.setAttribute('aria-pressed', s.classList.contains('armed') ? 'true' : 'false');
+  });
+}
+
 function initializeContrast() {
+  syncArmedSlotAria();
   document.getElementById('contrast-fg').addEventListener('click', () => {
     const slot = document.getElementById('contrast-fg');
     if (armedSlot === 'fg') {
@@ -1026,6 +1037,7 @@ function initializeContrast() {
       document.querySelectorAll('.contrast-slot').forEach(s => s.classList.remove('armed'));
       slot.classList.add('armed');
     }
+    syncArmedSlotAria();
   });
   document.getElementById('contrast-bg').addEventListener('click', () => {
     const slot = document.getElementById('contrast-bg');
@@ -1037,5 +1049,6 @@ function initializeContrast() {
       document.querySelectorAll('.contrast-slot').forEach(s => s.classList.remove('armed'));
       slot.classList.add('armed');
     }
+    syncArmedSlotAria();
   });
 }
