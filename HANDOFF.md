@@ -390,6 +390,6 @@ references are historical.
   superseded.
 - `docs/assets/social-preview.png` artwork freshness unverified against
   current branding.
-- CoC contact `LXBStudioLLC@gmail.com` (deliberate correction in
-  `2ac5b81`) — confirm that mailbox exists before pointing contributors
-  at it.
+- CoC contact `LXBStudioLLC@gmail.com` — **RESOLVED 2026-07-17**: owner
+  confirmed this is the correct official LXB Studio contact address. It is
+  the one used in the store listings and the site privacy policy.
