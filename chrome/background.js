@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler Background Script (Chrome Build)
- * Version: 2.2.0
+ * Version: 2.3.0
  *
  * Handles service worker lifecycle, message passing, and tool activation
  * with robust error handling and cross-browser compatibility.
@@ -43,12 +43,15 @@ function setBadge(text) {
   chrome.action.setBadgeText({ text: text });
 }
 
-function flashDoneBadge() {
+// stillActive: sticky mode kept the tool running after this result, so the
+// \u2713 gives way to \u25CF again (and the tab stays the badge owner) instead
+// of clearing.
+function flashDoneBadge(stillActive) {
   if (badgeClearTimer) clearTimeout(badgeClearTimer);
   setBadge('\u2713');
-  forgetToolTab(); // the tool session ended with a result
+  if (!stillActive) forgetToolTab(); // the tool session ended with a result
   badgeClearTimer = setTimeout(() => {
-    setBadge('');
+    setBadge(stillActive ? '\u25CF' : '');
     badgeClearTimer = null;
   }, 2000);
 }
@@ -407,7 +410,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     });
 
-    flashDoneBadge();
+    flashDoneBadge(message.toolActive === true);
     sendResponse({ success: true });
     return true;
   }
@@ -416,7 +419,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({ lastDetectedFont: message.fontDetails }, () => {
       chrome.runtime.sendMessage(message).catch(() => {});
     });
-    flashDoneBadge();
+    flashDoneBadge(message.toolActive === true);
     sendResponse({ success: true });
     return true;
   }
@@ -425,7 +428,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({ lastMeasurement: message.measurements }, () => {
       chrome.runtime.sendMessage(message).catch(() => {});
     });
-    flashDoneBadge();
+    flashDoneBadge(message.toolActive === true);
     sendResponse({ success: true });
     return true;
   }

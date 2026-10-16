@@ -45,6 +45,9 @@ Free. Offline. Open source.
 ## What it does
 
 Three precision tools, available from one toolbar button or the right-click menu.
+Every tool stays active until you press Esc, so you can pick, identify, or
+measure several things in a row (turn that off in Options if you prefer
+one-shot tools).
 
 <table>
 <tr>
@@ -166,8 +169,11 @@ Recent releases:
 - **v2.2.0** — Firefox parity restoration: Copy All Colors on Page, measure
   area + Shift-snap, full saved-fonts history, right-click text-color picking,
   first-run welcome page, toolbar badge, and a Firefox-themed default palette.
+- **v2.3.0** — Sticky tools (stay active until Esc, default on, Options
+  toggle), popup reopens on the last-used tab, confirmation-window clicks no
+  longer leak to the page.
 
-Future candidates are in ROADMAP's **Later — v2.3+** section: spacing
+Future candidates are in ROADMAP's **Later — v2.4+** section: spacing
 inspector, box-shadow / gradient extractor, annotated screenshot export,
 per-site palettes, and more.
 

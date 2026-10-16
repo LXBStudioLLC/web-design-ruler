@@ -13,6 +13,43 @@ build with a sidebar UI cut before AMO submission. Newest first.
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-10-16
+
+Sticky tools. Prompted by a 3-star Chrome Web Store review ("Every time, it
+needs to be selected again. That's really annoying."): every tool closed
+itself after a single pick, detection, or measurement, and the popup always
+reopened on the Color tab, so each repeat cost three clicks. No new
+permissions. All three builds.
+
+### Added
+- **Sticky tools (default on).** The color picker, font detector, and
+  measure tool stay active after each result until Esc. The existing
+  confirmation still shows (1 s picker, 1.5 s font/measure), then the live
+  panel returns: the picker re-resolves the element under the cursor, the
+  font detector re-highlights, and the measure tool keeps the last values
+  in its grid and the drawn box on screen until the next drag. Panel hints
+  say "Esc to exit" while sticky mode is on. Result messages carry
+  `toolActive`, so the toolbar badge flashes `✓` and returns to `●`
+  (and the tab stays the badge owner) instead of clearing.
+- **Options → "Keep tools active after each pick or measurement."**
+  Unchecking restores the previous one-shot behavior. Read as
+  `settings.stickyTools !== false`; the content script caches it and
+  listens to `storage.onChanged`, so a change applies to already-open
+  tabs without reinjection. The native EyeDropper (Chrome/Edge opt-in)
+  stays single-shot: the API needs a fresh user gesture per open.
+- **Popup reopens on the last-used tab.** Tab clicks persist
+  `lastPopupTab` to `storage.local`; the popup restores it on open
+  instead of always starting on Color.
+
+### Changed
+- Clicks and right-clicks that land while a tool's confirmation is showing
+  are now swallowed instead of passed through to the page. Previously a
+  click inside that window could follow a link out from under the tool.
+- A bare click (no drag) in the measure tool no longer saves a 0 × 0
+  measurement over the last real one; the tool just keeps waiting.
+- Welcome page mentions that tools stay active until Esc.
+- All three manifests and file headers bumped `2.2.0` → `2.3.0`.
+
 ## [2.2.0] — 2026-07-06
 
 v1.1.1 feature parity restoration. Six features ported from the legacy

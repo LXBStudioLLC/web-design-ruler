@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler Content Script (Firefox Build)
- * Version: 2.2.0
+ * Version: 2.3.0
  *
  * FIREFOX-SPECIFIC: Uses browser.* namespace where available
  * Includes enhanced color picker with image/canvas/video support
@@ -23,7 +23,21 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
   }
 
   let _debug = false;
-  try { browserAPI.storage.local.get('settings').then((data) => { _debug = (data.settings && data.settings.debugLogging) || false; }).catch(() => {}); } catch {}
+  // Sticky tools (default on): a tool stays active after each pick/detect/
+  // measure until Esc. Cached so the synchronous tool code can read it, and
+  // refreshed via storage.onChanged so an Options change applies at once.
+  let _stickyTools = true;
+  function applySettings(settings) {
+    settings = settings || {};
+    _debug = settings.debugLogging || false;
+    _stickyTools = settings.stickyTools !== false;
+  }
+  try { browserAPI.storage.local.get('settings').then((data) => applySettings(data && data.settings)).catch(() => {}); } catch {}
+  try {
+    browserAPI.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.settings) applySettings(changes.settings.newValue);
+    });
+  } catch {}
   function log(...args) { if (_debug) console.log(...args); }
 
   log('[WDR-Firefox] Content script loaded:', window.location.href);
@@ -155,7 +169,8 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     document.body.style.userSelect = 'none';
 
     let isActive = true;
-    let isFinishing = false; // color committed; ignore further input until the delayed cleanup runs
+    let isFinishing = false; // color committed; ignore further input while the confirmation shows
+    let pickSeq = 0; // a slow clipboard confirmation must not overwrite a resumed (sticky) panel
     let currentBgColor = null;
     let currentTextColor = null;
     let currentPixelColor = null; // For image/canvas/video
@@ -190,7 +205,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     });
 
     const initSpan = createElement('span', {});
-    initSpan.textContent = 'Hover any element. Click = background color, right-click = text color. ESC to cancel.';
+    initSpan.textContent = 'Hover any element. Click = background color, right-click = text color. ESC to ' + (_stickyTools ? 'exit' : 'cancel') + '.';
 
     const pixelContainer = createElement('div', { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' });
     pixelContainer.dataset.colorType = 'pixel';
@@ -405,16 +420,20 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
 
     function selectColor(selectedColor, colorLabel) {
       isFinishing = true;
+      const stayActive = _stickyTools; // decided per pick so the badge and the panel agree
+      const seq = ++pickSeq;
       log('[WDR-Firefox] Color picked:', selectedColor, 'label:', colorLabel, 'from:', currentSource);
 
       // Notify background script (single-writer: background handles storage)
       safeSend({
         action: 'colorPicked',
-        color: selectedColor
+        color: selectedColor,
+        toolActive: stayActive // badge returns to \u25CF instead of clearing
       });
 
       // Copy to clipboard, then show a confirmation that reflects the result
       copyToClipboard(selectedColor).then((copied) => {
+        if (!isActive || seq !== pickSeq || !isFinishing) return; // tool exited or already resumed
         const confirmCheck = createElement('span', { color: copied ? COLORS.success : '#F59E0B', fontSize: '20px' });
         confirmCheck.textContent = copied ? '\u2713' : '\u26A0';
         const confirmText = createElement('span', {});
@@ -422,14 +441,22 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
         panel.replaceChildren(confirmCheck, confirmText);
       });
 
-      setTimeout(cleanup, 1000);
+      setTimeout(() => {
+        if (!isActive) return;
+        if (!stayActive) { cleanup(); return; }
+        // Sticky: bring the live panel back and keep picking until Esc.
+        panel.replaceChildren(initSpan, pixelContainer, bgContainer, divider, textContainer);
+        isFinishing = false;
+        if (lastMoveEvent && !rafId) rafId = requestAnimationFrame(processMove);
+      }, 1000);
     }
 
     function onClick(e) {
-      if (!isActive || isFinishing) return;
+      if (!isActive) return;
 
       e.preventDefault();
       e.stopPropagation();
+      if (isFinishing) return; // confirmation showing: swallow the click rather than pass it to the page
 
       // Check if click is on a color swatch in the panel (for specific color selection)
       const colorTypeElement = e.target.closest('[data-color-type]');
@@ -466,9 +493,10 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     }
 
     function onContextMenu(e) {
-      if (!isActive || isFinishing) return;
+      if (!isActive) return;
       e.preventDefault();
       e.stopPropagation();
+      if (isFinishing) return;
       if (currentTextColor) {
         selectColor(currentTextColor, 'text');
       }
@@ -541,7 +569,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     document.body.style.userSelect = 'none';
 
     let isActive = true;
-    let isFinishing = false; // font committed; ignore further input until the delayed cleanup runs
+    let isFinishing = false; // font committed; ignore further input while the confirmation shows
     let highlightedElement = null;
     let highlightBox = null;
     let rafId = null;
@@ -572,7 +600,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     fontHeader.replaceChildren(fontIcon, fontTitle);
 
     const fontInstruction = createElement('div', { color: '#9CA3AF' });
-    fontInstruction.textContent = 'Hover over text to see font details. Click to select.';
+    fontInstruction.textContent = 'Hover over text to see font details. Click to select.' + (_stickyTools ? ' Esc to exit.' : '');
 
     const previewWrap = createElement('div', { padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', marginBottom: '12px' });
     previewWrap.style.display = 'none';
@@ -608,7 +636,7 @@ if (window.__WDR_CONTENT_SCRIPT_LOADED__) {
     grid.replaceChildren(sizeLabel, sizeValue, weightLabel, weightValue, styleLabel, styleValue, colorLabel, colorValue, lineHeightLabel, lineHeightValue);
 
     const fontFooter = createElement('div', { textAlign: 'center', color: '#9CA3AF', fontSize: '11px', marginTop: '12px' });
-    fontFooter.textContent = 'Click to select';
+    fontFooter.textContent = 'Click to select' + (_stickyTools ? ' \u00B7 Esc to exit' : '');
     fontFooter.style.display = 'none';
 
     panel.replaceChildren(fontHeader, fontInstruction, previewWrap, grid, fontFooter);
@@ -772,17 +800,19 @@ color: ${rgbToHex(style.color)};`
     }
 
     function onClick(e) {
-      if (!isActive || isFinishing || !highlightedElement) return;
+      if (!isActive) return;
 
       e.preventDefault();
       e.stopPropagation();
+      if (isFinishing || !highlightedElement) return; // swallow rather than pass to the page
 
       isFinishing = true;
+      const stayActive = _stickyTools;
 
       const details = getFontDetails(highlightedElement);
       log('[WDR-Firefox] Font detected:', details);
 
-      safeSend({ action: 'fontDetected', fontDetails: details });
+      safeSend({ action: 'fontDetected', fontDetails: details, toolActive: stayActive });
 
       // Copy CSS to clipboard; the sub-line reports the actual result
       const fontConfirmWrap = createElement('div', { textAlign: 'center', padding: '20px' });
@@ -797,7 +827,15 @@ color: ${rgbToHex(style.color)};`
       fontConfirmWrap.replaceChildren(fontConfirmCheck, fontConfirmTitle, fontConfirmSub);
       panel.replaceChildren(fontConfirmWrap);
 
-      setTimeout(cleanup, 1500);
+      setTimeout(() => {
+        if (!isActive) return;
+        if (!stayActive) { cleanup(); return; }
+        // Sticky: bring the live panel back and keep detecting until Esc.
+        panel.replaceChildren(fontHeader, fontInstruction, previewWrap, grid, fontFooter);
+        isFinishing = false;
+        highlightedElement = null; // re-resolve whatever is under the cursor now
+        if (lastMoveEvent && !rafId) rafId = requestAnimationFrame(processMove);
+      }, 1500);
     }
 
     function onKeyDown(e) {
@@ -858,7 +896,7 @@ color: ${rgbToHex(style.color)};`
     document.body.style.userSelect = 'none';
 
     let isActive = true;
-    let isFinishing = false; // measurement committed; ignore further input until the delayed cleanup runs
+    let isFinishing = false; // measurement committed; ignore further input while the confirmation shows
     let isDrawing = false;
     let startX = 0, startY = 0, endX = 0, endY = 0;
     let rafId = null;
@@ -933,7 +971,7 @@ color: ${rgbToHex(style.color)};`
     measureHeader.replaceChildren(measureIcon, measureTitle);
 
     const measureInstruction = createElement('div', { color: '#9CA3AF' });
-    measureInstruction.textContent = 'Click and drag to measure';
+    measureInstruction.textContent = 'Click and drag to measure' + (_stickyTools ? '. Esc to exit' : '');
 
     const mGrid = createElement('div', { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' });
     mGrid.style.display = 'none';
@@ -1029,6 +1067,8 @@ color: ${rgbToHex(style.color)};`
       }
       startX = endX = x;
       startY = endY = y;
+      // A sticky-mode measurement may still be drawn from last time: hide it until this drag moves.
+      [measureBox, widthLabel, heightLabel, diagonalLabel].forEach(el => { el.style.display = 'none'; });
       e.preventDefault();
     }
 
@@ -1058,7 +1098,6 @@ color: ${rgbToHex(style.color)};`
       if (e.button !== 0) return; // releases of other buttons don't end the drag
 
       isDrawing = false;
-      isFinishing = true;
       shiftHeld = e.shiftKey;
       let x = e.clientX;
       let y = e.clientY;
@@ -1068,10 +1107,15 @@ color: ${rgbToHex(style.color)};`
       }
       endX = x;
       endY = y;
-      updateMeasurement();
 
       const width = Math.abs(endX - startX);
       const height = Math.abs(endY - startY);
+      if (width === 0 && height === 0) return; // a bare click is not a measurement; keep the last saved one
+
+      isFinishing = true;
+      const stayActive = _stickyTools;
+      updateMeasurement();
+
       const measurements = {
         width: width,
         height: height,
@@ -1081,7 +1125,7 @@ color: ${rgbToHex(style.color)};`
 
       log('[WDR-Firefox] Measurement taken:', measurements);
 
-      safeSend({ action: 'measurementTaken', measurements });
+      safeSend({ action: 'measurementTaken', measurements, toolActive: stayActive });
 
       const savedWrap = createElement('div', { textAlign: 'center', padding: '15px' });
       const savedCheck = createElement('div', { color: COLORS.success, fontSize: '28px' });
@@ -1093,7 +1137,17 @@ color: ${rgbToHex(style.color)};`
       savedWrap.replaceChildren(savedCheck, savedTitle, savedMeasurements);
       panel.replaceChildren(savedWrap);
 
-      setTimeout(cleanup, 1500);
+      setTimeout(() => {
+        if (!isActive) return;
+        if (!stayActive) { cleanup(); return; }
+        // Sticky: bring the live panel back (last values stay in the grid, the
+        // drawn box stays until the next drag) and keep measuring until Esc.
+        mFooter.style.display = 'none';
+        measureInstruction.textContent = 'Drag to measure again. Esc to exit';
+        measureInstruction.style.display = '';
+        panel.replaceChildren(measureHeader, measureInstruction, mGrid, mFooter);
+        isFinishing = false;
+      }, 1500);
     }
 
     function onKeyDown(e) {

@@ -98,6 +98,20 @@ grouped in one bullet.) See [CHANGELOG](./CHANGELOG.md#220--2026-07-06).
 | **"Copy All Colors on Page" context-menu action** | Walks the DOM, dedupes computed colors, builds an auto-named palette, copies as CSS custom properties to the clipboard. A workflow win that designers reach for often. | M | None | None |
 | **Firefox-themed default palette** | v1.1.1 seeded a "Firefox Theme" palette (`#FF9500`, `#002147`, `#00FEFF`, `#B1B1B3`, `#FFFFFF`) alongside LXB Studio / Material Design / Neutrals. v2.0.0 reduced defaults to two generic palettes. Worth restoring as a per-build seed. | XS | None | None |
 
+## Shipped — v2.3.0 (2026-10-16, sticky tools)
+
+Driven by a 3-star Chrome Web Store review ("Every time, it needs to be
+selected again. That's really annoying."). See
+[CHANGELOG](./CHANGELOG.md#230--2026-10-16).
+
+- **Sticky tools, default on.** Each tool stays active after a pick,
+  detection, or measurement until Esc; the badge flashes `✓` and returns
+  to `●`. Options toggle restores one-shot behavior. The native
+  EyeDropper (Chrome/Edge opt-in) stays single-shot by nature of the API.
+- **Popup reopens on the last-used tab** instead of always on Color.
+- Confirmation-window clicks no longer leak to the page; a bare click in
+  the measure tool no longer saves a 0 × 0 measurement.
+
 ---
 
 ## Open items (reserved owner decisions)
@@ -110,7 +124,7 @@ grouped in one bullet.) See [CHANGELOG](./CHANGELOG.md#220--2026-07-06).
 
 ---
 
-## Later — v2.3+ candidate features
+## Later — v2.4+ candidate features
 
 These are user-requested or designer-workflow features. Each one would land in
 its own release. Listed without strict priority — pick whichever solves your

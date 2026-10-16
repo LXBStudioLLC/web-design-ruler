@@ -7,19 +7,25 @@ if (typeof browser !== 'undefined' && browser.runtime) {
   browserAPI = { storage: { local: { get: () => Promise.resolve({}), set: () => Promise.resolve() } } };
 }
 
+const stickyToggle = document.getElementById('sticky-tools');
 const debugToggle = document.getElementById('debug-logging');
 
 browserAPI.storage.local.get('settings').then((data) => {
-  const settings = data.settings || {};
+  const settings = (data && data.settings) || {};
+  if (stickyToggle) stickyToggle.checked = settings.stickyTools !== false; // default on
   if (debugToggle) debugToggle.checked = settings.debugLogging || false;
 }).catch(() => {});
 
-if (debugToggle) {
-  debugToggle.addEventListener('change', () => {
+function bindToggle(toggle, key) {
+  if (!toggle) return;
+  toggle.addEventListener('change', () => {
     browserAPI.storage.local.get('settings').then((data) => {
-      const settings = data.settings || {};
-      settings.debugLogging = debugToggle.checked;
+      const settings = (data && data.settings) || {};
+      settings[key] = toggle.checked;
       return browserAPI.storage.local.set({ settings });
     }).catch(() => {});
   });
 }
+
+bindToggle(stickyToggle, 'stickyTools');
+bindToggle(debugToggle, 'debugLogging');

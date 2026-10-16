@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler - Popup Script
- * Version: 2.2.0
+ * Version: 2.3.0
  *
  * Handles popup UI interactions and communication with background script
  */
@@ -103,22 +103,36 @@ function initializeTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
 
+  function selectTab(button) {
+    tabButtons.forEach(btn => {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-selected', 'false');
+      btn.setAttribute('tabindex', '-1');
+    });
+    tabPanes.forEach(pane => pane.classList.remove('active'));
+    button.classList.add('active');
+    button.setAttribute('aria-selected', 'true');
+    button.setAttribute('tabindex', '0');
+    const tabId = button.getAttribute('data-tab') + '-tab';
+    document.getElementById(tabId).classList.add('active');
+  }
+
   tabButtons.forEach(button => {
     button.setAttribute('aria-controls', button.getAttribute('data-tab') + '-tab');
     button.setAttribute('tabindex', button.classList.contains('active') ? '0' : '-1');
     button.addEventListener('click', () => {
-      tabButtons.forEach(btn => {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-selected', 'false');
-        btn.setAttribute('tabindex', '-1');
-      });
-      tabPanes.forEach(pane => pane.classList.remove('active'));
-      button.classList.add('active');
-      button.setAttribute('aria-selected', 'true');
-      button.setAttribute('tabindex', '0');
-      const tabId = button.getAttribute('data-tab') + '-tab';
-      document.getElementById(tabId).classList.add('active');
+      selectTab(button);
+      // Remember the tab so the popup reopens where the user left off.
+      chrome.storage.local.set({ lastPopupTab: button.getAttribute('data-tab') }, () => void chrome.runtime.lastError);
     });
+  });
+
+  // Reopen on the last-used tab (the markup defaults to Color).
+  chrome.storage.local.get('lastPopupTab', (data) => {
+    const last = data && data.lastPopupTab;
+    if (!last) return;
+    const button = Array.from(tabButtons).find(b => b.getAttribute('data-tab') === last);
+    if (button && !button.classList.contains('active')) selectTab(button);
   });
 
   document.querySelector('.tabs').addEventListener('keydown', (e) => {

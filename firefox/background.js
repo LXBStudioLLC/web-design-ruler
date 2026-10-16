@@ -1,6 +1,6 @@
 /**
  * Web Design Ruler Background Script (Firefox Build)
- * Version: 2.2.0
+ * Version: 2.3.0
  *
  * FIREFOX-SPECIFIC BUILD:
  * - Uses browser.* namespace with Promises
@@ -57,12 +57,15 @@ function setBadge(text) {
   browserAPI.action.setBadgeText({ text: text });
 }
 
-function flashDoneBadge() {
+// stillActive: sticky mode kept the tool running after this result, so the
+// \u2713 gives way to \u25CF again (and the tab stays the badge owner) instead
+// of clearing.
+function flashDoneBadge(stillActive) {
   if (badgeClearTimer) clearTimeout(badgeClearTimer);
   setBadge('\u2713');
-  forgetToolTab(); // the tool session ended with a result
+  if (!stillActive) forgetToolTab(); // the tool session ended with a result
   badgeClearTimer = setTimeout(() => {
-    setBadge('');
+    setBadge(stillActive ? '\u25CF' : '');
     badgeClearTimer = null;
   }, 2000);
 }
@@ -392,7 +395,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.error('[WDR-Firefox] recentColors storage error:', e);
     }).then(() => browserAPI.runtime.sendMessage(message)).catch(() => {});
 
-    flashDoneBadge();
+    flashDoneBadge(message.toolActive === true);
     sendResponse({ success: true });
     return false;
   }
@@ -402,7 +405,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((e) => console.error('[WDR-Firefox] lastDetectedFont storage error:', e))
       .then(() => browserAPI.runtime.sendMessage(message))
       .catch(() => {});
-    flashDoneBadge();
+    flashDoneBadge(message.toolActive === true);
     sendResponse({ success: true });
     return false;
   }
@@ -412,7 +415,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((e) => console.error('[WDR-Firefox] lastMeasurement storage error:', e))
       .then(() => browserAPI.runtime.sendMessage(message))
       .catch(() => {});
-    flashDoneBadge();
+    flashDoneBadge(message.toolActive === true);
     sendResponse({ success: true });
     return false;
   }
